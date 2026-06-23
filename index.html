@@ -111,6 +111,21 @@
     border-radius:0; box-shadow:inset 0 0 9vh rgba(0,0,0,.95);
   }
   :fullscreen.tv .brand, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
+
+  /* ---- ?tv : kiosk režim pro fyzickou televizi (skryje skříň + tlačítka) ---- */
+  body.tvmode { background:#000; }
+  body.tvmode .controls { display:none; }
+  body.tvmode .tv {
+    width:100vw; height:100vh; padding:0; border:0; border-radius:0;
+    background:#000; box-shadow:none;
+    display:flex; align-items:center; justify-content:center;
+  }
+  body.tvmode .tv::before, body.tvmode .brand, body.tvmode .led { display:none; }
+  body.tvmode .screen {
+    width:min(100vw,133.333vh); height:auto;
+    border-radius:0;
+    box-shadow:inset 0 0 9vh rgba(0,0,0,.95), inset 0 0 1.5vh rgba(0,0,0,1);
+  }
 </style>
 </head>
 <body>
@@ -131,6 +146,9 @@
 
 <script>
 //================= SETUP =================
+// ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
+if(new URLSearchParams(location.search).has('tv')) document.body.classList.add('tvmode');
+
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
