@@ -676,8 +676,8 @@ function drawPlay(hideSide){
   const cdRem = countdownEnd - performance.now();
   if(mode==='play' && cdRem>0){
     ctx.fillStyle='rgba(6,8,20,0.45)'; ctx.fillRect(0,0,W,H);
-    T('PŘIPRAVTE SE', W/2, H/2-26, 11, '#cba6ec', 'center', true);
-    T(''+Math.ceil(cdRem/1000), W/2, H/2+30, 60, '#f8d77e', 'center', true);
+    T('PŘIPRAVTE SE', W/2, H/2-18, 11, '#cba6ec', 'center', true);
+    T(''+Math.ceil(cdRem/1000), W/2, H/2+18, 30, '#f8d77e', 'center', true);
   }
   if(mode==='play' && paused){
     ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
