@@ -645,8 +645,8 @@ function drawMenu(){
 
   const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
   const c2 = pendingAI ? '#f8d77e' : '#7a7a8a';
-  T((pendingAI?'  ':'▶ ')+'1 · DVA HRÁČI', W/2, 196, 10, c1, 'center', !pendingAI);
-  T((pendingAI?'▶ ':'  ')+'2 · VS POČÍTAČ', W/2, 210, 10, c2, 'center', pendingAI);
+  T((pendingAI?'  ':'▶ ')+'DVA HRÁČI', W/2, 196, 10, c1, 'center', !pendingAI);
+  T((pendingAI?'▶ ':'  ')+'VS POČÍTAČ', W/2, 210, 10, c2, 'center', pendingAI);
 
   if(frameCount%50<32) T('— stiskni ENTER pro start —', W/2, 230, 9, '#ffffff', 'center', true);
 }
@@ -692,8 +692,8 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
 
   if(mode==='menu'){
-    if(e.code==='Digit1'||e.code==='Numpad1') pendingAI=false;
-    else if(e.code==='Digit2'||e.code==='Numpad2') pendingAI=true;
+    if(e.code==='KeyW'||e.code==='ArrowUp') pendingAI=false;
+    else if(e.code==='KeyS'||e.code==='ArrowDown') pendingAI=true;
     else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') startGame(pendingAI);
     return;
   }
@@ -749,7 +749,7 @@ function pollGamepads(){
     const hit = k => cur[k] && !prev[k];
 
     if(mode==='menu'){
-      if(hit('up')||hit('down')||hit('left')||hit('right')) pendingAI = !pendingAI;
+      if(hit('up')) pendingAI = false; else if(hit('down')) pendingAI = true;
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
       if(hit('confirm')) mode='menu';

@@ -27,7 +27,8 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Otočit    | `W`            | `↑`              |
 | Dolů      | `S`            | `↓`              |
 
-V menu: `1` = dva hráči · `2` = vs počítač (na trénink sólo) · `Enter` = start · `F` = fullscreen.
+V menu: nahoru/dolů (`W`/`S` nebo šipky, případně ovladač) přepíná mezi *dva hráči* a
+*vs počítač* (na trénink sólo) · `Enter` = start · `F` = fullscreen.
 
 ## Režim `?tv` (pro fyzickou televizi)
 
