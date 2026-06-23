@@ -178,10 +178,10 @@ let winner = null;
 let pendingAI = false;    // false = 2 hráči, true = vs počítač
 let frameCount = 0;
 let level = 3;                          // 1..5 -> počet starostí
-let countdown = 0;                      // odpočet 3·2·1 (ve snímcích)
+let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
 let paused = false;
 const VIRUS_LEVELS = [4,6,8,11,15];     // počet starostí pro úrovně 1..5
-const COUNTDOWN_FRAMES = 180;           // 3 s při 60 fps
+const COUNTDOWN_MS = 3000;              // 3 reálné sekundy
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
@@ -434,7 +434,7 @@ function startGame(ai){
   players[1].ai = ai;
   winner=null;
   paused=false;
-  countdown=COUNTDOWN_FRAMES;
+  countdownEnd=performance.now()+COUNTDOWN_MS;
   mode='play';
 }
 function updatePlayer(p){
@@ -458,7 +458,7 @@ function updatePlayer(p){
   }
 }
 function update(){
-  if(countdown>0){ countdown--; return; }
+  if(performance.now() < countdownEnd) return;
   if(paused) return;
   for(const p of players) updatePlayer(p);
   for(const p of players){
@@ -621,19 +621,19 @@ function drawMini(x,y,color,s){
   ctx.fillStyle=p.l; rr(x+1.5,y+1.5,s*0.34,s*0.34,1.5); ctx.fill();
 }
 function drawNext(p, cx){
-  const s=9, y=24;
+  const s=8, y=20;
   drawMini(cx-s, y, p.next.ca, s);
   drawMini(cx,   y, p.next.cb, s);
 }
 function drawLevelSel(y){
-  T('STAROSTI', W/2, y-9, 8, '#cba6ec', 'center');
-  const n=5, gap=12, x0=W/2-(n-1)*gap/2;
+  const n=5, gap=11, dotsW=(n-1)*gap, x0=168;
+  T('STAROSTI', x0-22, y+3, 8, '#cba6ec', 'right');
+  T('‹', x0-11, y+3.5, 10, '#6f6a8a', 'center');
   for(let i=0;i<n;i++){
     ctx.beginPath(); ctx.arc(x0+i*gap, y, 3.2, 0, 7);
-    ctx.fillStyle = i<level ? '#f8d77e' : 'rgba(255,255,255,0.18)'; ctx.fill();
+    ctx.fillStyle = i<level ? '#f8d77e' : 'rgba(255,255,255,0.20)'; ctx.fill();
   }
-  T('◀', x0-gap+2, y+3, 9, '#8f86b0','center');
-  T('▶', x0+n*gap-2, y+3, 9, '#8f86b0','center');
+  T('›', x0+dotsW+11, y+3.5, 10, '#6f6a8a', 'center');
 }
 
 function drawPlay(hideSide){
@@ -654,8 +654,8 @@ function drawPlay(hideSide){
   drawBoard(players[0], LX0);
   drawBoard(players[1], RX0);
 
-  T('ŽENICH',  LX0+BW/2, BY-9, 9, '#cba6ec', 'center', true);
-  T('NEVĚSTA', RX0+BW/2, BY-9, 9, '#f8a8c4', 'center', true);
+  T('ŽENICH',  LX0+BW/2, BY-6, 9, '#cba6ec', 'center', true);
+  T('NEVĚSTA', RX0+BW/2, BY-6, 9, '#f8a8c4', 'center', true);
   T('STAROSTI: '+players[0].virusCount, LX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
   T('STAROSTI: '+players[1].virusCount, RX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
 
@@ -669,10 +669,11 @@ function drawPlay(hideSide){
   heart(W/2, BY+BH/2-14, 6, frameCount%40<20 ? '#ff5d8a':'#ef5f93');
   T('VS', W/2, BY+BH/2+12, 9, '#f8d77e', 'center', true);
 
-  if(mode==='play' && countdown>0){
+  const cdRem = countdownEnd - performance.now();
+  if(mode==='play' && cdRem>0){
     ctx.fillStyle='rgba(6,8,20,0.45)'; ctx.fillRect(0,0,W,H);
     T('PŘIPRAVTE SE', W/2, H/2-26, 11, '#cba6ec', 'center', true);
-    T(''+Math.ceil(countdown/60), W/2, H/2+30, 60, '#f8d77e', 'center', true);
+    T(''+Math.ceil(cdRem/1000), W/2, H/2+30, 60, '#f8d77e', 'center', true);
   }
   if(mode==='play' && paused){
     ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
@@ -694,12 +695,12 @@ function drawMenu(){
 
   const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
   const c2 = pendingAI ? '#f8d77e' : '#7a7a8a';
-  T((pendingAI?'  ':'▶ ')+'DVA HRÁČI', W/2, 186, 10, c1, 'center', !pendingAI);
-  T((pendingAI?'▶ ':'  ')+'VS POČÍTAČ', W/2, 199, 10, c2, 'center', pendingAI);
+  T((pendingAI?'  ':'▶ ')+'DVA HRÁČI', W/2, 184, 10, c1, 'center', !pendingAI);
+  T((pendingAI?'▶ ':'  ')+'VS POČÍTAČ', W/2, 198, 10, c2, 'center', pendingAI);
 
-  drawLevelSel(218);
+  drawLevelSel(213);
 
-  if(frameCount%50<32) T('— ENTER / START —', W/2, 234, 8, '#ffffff', 'center', true);
+  if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
 }
 
 function drawOver(){
