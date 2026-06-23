@@ -597,7 +597,7 @@ function heart(x,y,sz,col){
   ctx.fill();
 }
 
-function drawPlay(){
+function drawPlay(hideSide){
   bgScreen();
   T('DR. WEDDING', W/2, 14, 13, '#f8d77e', 'center', true);
   heart(W/2-44, 6, 4, '#ef5f93'); heart(W/2+44, 6, 4, '#ef5f93');
@@ -607,8 +607,10 @@ function drawPlay(){
   const jumpL = players[0].animClear>0 ? -Math.abs(Math.sin((26-players[0].animClear)*0.4))*9 : 0;
   const jumpR = players[1].animClear>0 ? -Math.abs(Math.sin((26-players[1].animClear)*0.4))*9 : 0;
 
-  drawGroom(32, BY+BH-2 + bobL + jumpL, 3);
-  drawBride(288, BY+BH-2 + bobR + jumpR, 3);
+  if(!hideSide){
+    drawGroom(32, BY+BH-2 + bobL + jumpL, 3);
+    drawBride(288, BY+BH-2 + bobR + jumpR, 3);
+  }
 
   drawBoard(players[0], LX0);
   drawBoard(players[1], RX0);
@@ -643,8 +645,8 @@ function drawMenu(){
 }
 
 function drawOver(){
-  drawPlay();
-  ctx.fillStyle='rgba(6,8,20,0.78)'; ctx.fillRect(0,0,W,H);
+  drawPlay(true);
+  ctx.fillStyle='rgba(6,8,20,0.82)'; ctx.fillRect(0,0,W,H);
   T('PRÁVĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
 
   for(let i=0;i<8;i++){
@@ -660,7 +662,7 @@ function drawOver(){
   heart(160, 108, 7, frameCount%30<15?'#ff5d8a':'#ef5f93');
 
   const wc = winner.side==='L' ? 138 : 182;
-  drawCrown(wc, fy-3.2*44-2, 1.1);
+  drawCrown(wc, fy - 3.2*37.5, 1.4);
   const wname = winner.side==='L' ? 'ŽENICH' : 'NEVĚSTA';
   T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
   if(frameCount%50<32) T('ENTER · hrát znovu', W/2, 228, 9, '#ffffff', 'center');
