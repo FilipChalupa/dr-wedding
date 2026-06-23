@@ -131,7 +131,7 @@
 <body>
   <div class="tv" id="tv">
     <div class="screen">
-      <canvas id="game" width="320" height="240"></canvas>
+      <canvas id="game" width="720" height="576"></canvas>
       <div class="scanlines"></div>
       <div class="glow"></div>
       <div class="flicker"></div>
@@ -152,7 +152,9 @@ if(new URLSearchParams(location.search).has('tv')) document.body.classList.add('
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+// Vnitřní souřadnice zůstávají 320×240, ale renderuje se do PAL bufferu 720×576.
 const W = 320, H = 240;
+ctx.scale(cv.width/W, cv.height/H);
 
 const COLS = 8, ROWS = 16, CELL = 10;          // jako originální Dr. Mario
 const LX0 = 70, RX0 = 170, BY = 46;            // board top-left positions
@@ -185,6 +187,7 @@ let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
 const FREEZE_MS = 900;
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
+const DAS_DELAY = 10, DAS_RATE = 3;    // posun do stran: 1× hned, prodleva, pak rychlé opakování
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
@@ -394,7 +397,7 @@ function dropGarbage(p){
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
 function startResolve(p){
   p.busy=true; p.phase='settle'; p.phaseTimer=0;
-  p.chains=0; p.gainCells=0; p.gainVir=0; p.gainGarbage=[]; p.firstCleared=false; p.flashes=[];
+  p.chains=0; p.gainCells=0; p.gainVir=0; p.gainGarbage=[]; p.flashes=[];
 }
 function resolveStep(p){
   if(p.phase==='settle'){
@@ -406,12 +409,9 @@ function resolveStep(p){
       if(mark.size>0){
         p.chains++; p.gainCells+=mark.size;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
-        // smetí: zdarma je jen úplně první linie; vše ostatní (víc linií v kroku
-        // i celé combo/řetěz) pošle svou barvu soupeři jako samostatnou kostičku
-        for(const col of runs){
-          if(!p.firstCleared){ p.firstCleared=true; continue; }
-          p.gainGarbage.push(col);
-        }
+        // smetí: každá zničená řada/sloupec pošle soupeři svou barvu jako
+        // samostatnou kostičku (víc linií naráz i combo/řetěz = víc smetí)
+        for(const col of runs) p.gainGarbage.push(col);
         p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
         if(p.gainVir>0) p.animClear=26;
         p.phase='clear'; p.phaseTimer=0;            // outline zůstane chvíli viset
@@ -817,6 +817,7 @@ function drawOver(){
 function frame(){
   frameCount++;
   pollGamepads();
+  pollKeyboard();
   if(mode==='play') update();
   if(mode==='menu') drawMenu();
   else if(mode==='play') drawPlay();
@@ -826,7 +827,24 @@ function frame(){
 requestAnimationFrame(frame);
 
 //================= INPUT =================
+// DAS pohyb do stran z herní smyčky (1× hned, krátká prodleva, pak rychlé opakování)
+const keyHeld = {};
+const kbRepeat = { a:{dir:0,timer:0}, b:{dir:0,timer:0} };
+function dasMove(st, dir, player){
+  if(dir===0){ st.dir=0; st.timer=0; return; }
+  if(st.dir!==dir){ move(player,dir); st.dir=dir; st.timer=DAS_DELAY; }
+  else if(--st.timer<=0){ move(player,dir); st.timer=DAS_RATE; }
+}
+function pollKeyboard(){
+  if(mode!=='play' || paused || ending || performance.now()<countdownEnd) return;
+  const p1=players[0], p2=players[1];
+  const pa = p2.ai ? p1 : p2;            // šipky v sólo hře ovládají člověka
+  dasMove(kbRepeat.a, (keyHeld['KeyD']?1:0)-(keyHeld['KeyA']?1:0), p1);
+  dasMove(kbRepeat.b, (keyHeld['ArrowRight']?1:0)-(keyHeld['ArrowLeft']?1:0), pa);
+}
+
 window.addEventListener('keydown', e=>{
+  keyHeld[e.code]=true;
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
 
   if(mode==='menu'){
@@ -847,18 +865,16 @@ window.addEventListener('keydown', e=>{
   if(paused) return;
   const p1=players[0], p2=players[1];
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
-  switch(e.code){
-    case 'KeyA': move(p1,-1); break;
-    case 'KeyD': move(p1, 1); break;
+  switch(e.code){              // pohyb do stran řeší pollKeyboard (DAS)
     case 'KeyW': if(!e.repeat) rotate(p1); break;
     case 'KeyS': p1.softDrop=true; break;
-    case 'ArrowLeft':  move(pa,-1); e.preventDefault(); break;
-    case 'ArrowRight': move(pa, 1); e.preventDefault(); break;
     case 'ArrowUp':    if(!e.repeat) rotate(pa); e.preventDefault(); break;
     case 'ArrowDown':  pa.softDrop=true; e.preventDefault(); break;
+    case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
   }
 });
 window.addEventListener('keyup', e=>{
+  keyHeld[e.code]=false;
   if(mode!=='play') return;
   if(e.code==='KeyS') players[0].softDrop=false;
   if(e.code==='ArrowDown') (players[1].ai?players[0]:players[1]).softDrop=false;
@@ -903,8 +919,8 @@ function pollGamepads(){
         const dir = cur.left ? -1 : cur.right ? 1 : 0;
         const rep = padRepeat[i] || {dir:0,timer:0};
         if(dir!==0){
-          if(rep.dir!==dir){ move(p,dir); rep.dir=dir; rep.timer=16; }   // počáteční prodleva
-          else if(--rep.timer<=0){ move(p,dir); rep.timer=6; }           // opakování při držení
+          if(rep.dir!==dir){ move(p,dir); rep.dir=dir; rep.timer=DAS_DELAY; }   // 1× hned + prodleva
+          else if(--rep.timer<=0){ move(p,dir); rep.timer=DAS_RATE; }           // rychlé opakování
         } else { rep.dir=0; rep.timer=0; }
         padRepeat[i] = rep;
       }

@@ -66,4 +66,5 @@ zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 
 Vše je v jediném souboru [`index.html`](index.html) — HTML, CSS i JavaScript (vanilla,
 `<canvas>`). Žádné externí knihovny, žádné fonty z internetu, funguje i offline.
-Vykreslování je v nízkém rozlišení 320×240 škálovaném nahoru pro autentický pixelový retro vzhled.
+Vykreslování běží v PAL rozlišení 720×576 (vnitřní herní souřadnice 320×240 se škálují
+nahoru), zobrazené v poměru 4:3 jako na staré televizi.
