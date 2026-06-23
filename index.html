@@ -159,10 +159,10 @@ const LX0 = 70, RX0 = 170, BY = 46;            // board top-left positions
 const BW = COLS*CELL, BH = ROWS*CELL;
 
 const COLORS = ['P','G','R'];
-const PAL = {
-  P:{c:'#a25ddc',l:'#cba6ec',d:'#5f2f97'},   // fialová (motýlek)
-  G:{c:'#f0b53a',l:'#f8d77e',d:'#aa7a12'},   // zlatá / šampaňské
-  R:{c:'#ef5f93',l:'#f8a8c4',d:'#b03363'},   // růžová
+const PAL = {                                // originální Dr. Mario barvy
+  P:{c:'#4f7be8',l:'#a6c0f4',d:'#2a4496'},   // modrá
+  G:{c:'#f0c83a',l:'#f8e07e',d:'#aa8512'},   // žlutá
+  R:{c:'#e84b4b',l:'#f3a0a0',d:'#9e2222'},   // červená
 };
 const DIR = {U:[-1,0],D:[1,0],L:[0,-1],R:[0,1]};
 const OPP = {U:'D',D:'U',L:'R',R:'L'};
@@ -181,6 +181,9 @@ let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
 let gameStart = 0;                      // čas (ms) začátku hraní (po odpočtu)
 let paused = false;
+let ending = false;                     // krátké zamrznutí po dohrání
+let freezeEnd = 0;                      // čas (ms) konce zamrznutí
+const FREEZE_MS = 900;
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
@@ -385,9 +388,10 @@ function applyGarbage(p){
 }
 
 function endGame(p,res){
-  if(mode==='over') return;
+  if(ending || mode==='over') return;
   paused=false;
-  mode='over';
+  ending=true;                               // na chvíli zamrzni, pak výherní obrazovka
+  freezeEnd=performance.now()+FREEZE_MS;
   winner = (res==='win') ? p : other(p);
   winner.celebrate=0;
 }
@@ -442,6 +446,7 @@ function startGame(ai){
   players[1].ai = ai;
   winner=null;
   paused=false;
+  ending=false;
   countdownEnd=performance.now()+COUNTDOWN_MS;
   gameStart=countdownEnd;
   mode='play';
@@ -471,6 +476,7 @@ function updatePlayer(p){
   }
 }
 function update(){
+  if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; } return; }
   if(performance.now() < countdownEnd) return;
   if(paused) return;
   for(const p of players) updatePlayer(p);
@@ -775,6 +781,7 @@ window.addEventListener('keydown', e=>{
     return;
   }
   // play
+  if(ending) return;
   if(e.code==='KeyP'){ paused=!paused; return; }
   if(paused) return;
   const p1=players[0], p2=players[1];
@@ -824,7 +831,7 @@ function pollGamepads(){
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
       if(hit('confirm')) mode='menu';
-    } else if(mode==='play'){
+    } else if(mode==='play' && !ending){
       if(hit('start')) paused=!paused;
       const p = players[i];
       if(!paused && p && !p.ai){
