@@ -185,7 +185,6 @@ let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
 const FREEZE_MS = 900;
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
-const FALL_STEP = 5;                    // snímků na 1 řádek padání zbytků
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
@@ -200,8 +199,8 @@ function newPlayer(side){
     grid:new Array(COLS*ROWS).fill(null),
     pill:null, next:randPill(),
     dropTimer:0, softDrop:false,
-    virusCount:0, pendingGarbage:0,
-    busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0,
+    virusCount:0, pendingGarbage:[],
+    busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
     score:0,
     ai:false, aiPlan:null, aiTimer:0,
@@ -218,9 +217,9 @@ function cellsOf(pill){
   const {r,c,orient,ca,cb}=pill;
   switch(orient){
     case 0:  return [{r,     c,     color:ca, partner:'R'}, {r,     c:c+1, color:cb, partner:'L'}]; // vodorovně
-    case 1:  return [{r,     c:c+1, color:ca, partner:'U'}, {r:r-1, c:c+1, color:cb, partner:'D'}]; // svisle, pravý sloupec
-    case 2:  return [{r,     c:c+1, color:ca, partner:'L'}, {r,     c,     color:cb, partner:'R'}]; // vodorovně
-    default: return [{r,     c,     color:ca, partner:'U'}, {r:r-1, c,     color:cb, partner:'D'}]; // svisle, levý sloupec
+    case 1:  return [{r,     c:c+1, color:ca, partner:'U'}, {r:r-1, c:c+1, color:cb, partner:'D'}]; // svisle vpravo: ca dole
+    case 2:  return [{r,     c:c+1, color:ca, partner:'L'}, {r,     c,     color:cb, partner:'R'}]; // vodorovně (prohozené)
+    default: return [{r:r-1, c,     color:ca, partner:'D'}, {r,     c,     color:cb, partner:'U'}]; // svisle vlevo: ca nahoře
   }
 }
 function canPlace(g, pill){
@@ -239,13 +238,13 @@ function placeInto(g, pill){
 function countViruses(g){ let n=0; for(const c of g) if(c&&c.kind==='virus') n++; return n; }
 
 function findClears(g){
-  const mark = new Set();
+  const mark = new Set(), runs = [];   // runs = barvy jednotlivých zničených řad/sloupců
   for(let r=0;r<ROWS;r++){
     let run=1;
     for(let c=1;c<=COLS;c++){
       const a = c<COLS ? g[I(r,c)] : null, b = g[I(r,c-1)];
       if(a&&b&&a.color===b.color) run++;
-      else { if(run>=4) for(let k=c-run;k<c;k++) mark.add(I(r,k)); run=1; }
+      else { if(run>=4){ for(let k=c-run;k<c;k++) mark.add(I(r,k)); runs.push(b.color); } run=1; }
     }
   }
   for(let c=0;c<COLS;c++){
@@ -253,10 +252,10 @@ function findClears(g){
     for(let r=1;r<=ROWS;r++){
       const a = r<ROWS ? g[I(r,c)] : null, b = g[I(r-1,c)];
       if(a&&b&&a.color===b.color) run++;
-      else { if(run>=4) for(let k=r-run;k<r;k++) mark.add(I(k,c)); run=1; }
+      else { if(run>=4){ for(let k=r-run;k<r;k++) mark.add(I(k,c)); runs.push(b.color); } run=1; }
     }
   }
-  return mark;
+  return {mark, runs};
 }
 function clearMarked(g, mark){
   let virus=0;
@@ -312,11 +311,29 @@ function gravityStep(g){
   return false;
 }
 function gravity(g){ while(gravityStep(g)){} }   // okamžitá gravitace (pro AI)
+// může vůbec něco spadnout? (bez mutace mřížky)
+function anyCanFall(g){
+  const visited=new Array(g.length).fill(false);
+  for(let r=ROWS-1;r>=0;r--) for(let c=0;c<COLS;c++){
+    const i=I(r,c), cell=g[i];
+    if(cell && cell.kind==='pill' && !visited[i]){
+      const grp=[{r,c}]; visited[i]=true;
+      if(cell.partner){
+        const [dr,dc]=DIR[cell.partner], nr=r+dr, nc=c+dc;
+        if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){ const ni=I(nr,nc); if(g[ni]&&g[ni].kind==='pill'&&!visited[ni]){ grp.push({r:nr,c:nc}); visited[ni]=true; } }
+      }
+      let canFall=true;
+      for(const cl of grp){ const br=cl.r+1; if(br>=ROWS){canFall=false;break;} const bi=I(br,cl.c); if(g[bi]&&!grp.some(x=>x.r===br&&x.c===cl.c)){canFall=false;break;} }
+      if(canFall) return true;
+    }
+  }
+  return false;
+}
 function resolveFull(g){
   gravity(g);
   let totalVirus=0, cells=0, chains=0; const cleared=[];
   while(true){
-    const mark=findClears(g);
+    const {mark}=findClears(g);
     if(mark.size===0) break;
     chains++; cells+=mark.size;
     mark.forEach(idx=> cleared.push({r:(idx/COLS)|0, c:idx%COLS}));
@@ -365,50 +382,49 @@ function lock(p){
   startResolve(p);
 }
 function dropGarbage(p){
-  const n=p.pendingGarbage; p.pendingGarbage=0;
-  for(let k=0;k<n;k++){
+  const q=p.pendingGarbage; p.pendingGarbage=[];
+  for(const col of q){
     const c=(Math.random()*COLS)|0;
     let target=-1;
     for(let r=0;r<ROWS;r++){ if(p.grid[I(r,c)]){ target=r-1; break; } if(r===ROWS-1) target=ROWS-1; }
     if(target<0) continue;
-    p.grid[I(target,c)] = {color:randColor(), kind:'pill', partner:null};
+    p.grid[I(target,c)] = {color:col, kind:'pill', partner:null};
   }
 }
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
 function startResolve(p){
-  p.busy=true; p.phase='settle'; p.phaseTimer=FALL_STEP;
-  p.chains=0; p.gainCells=0; p.gainVir=0; p.flashes=[];
+  p.busy=true; p.phase='settle'; p.phaseTimer=0;
+  p.chains=0; p.gainCells=0; p.gainVir=0; p.gainGarbage=[]; p.flashes=[];
 }
 function resolveStep(p){
-  p.phaseTimer++;
   if(p.phase==='settle'){
-    if(p.phaseTimer>=FALL_STEP){
-      p.phaseTimer=0;
-      if(!gravityStep(p.grid)){
-        const mark=findClears(p.grid);
-        if(mark.size>0){
-          p.chains++; p.gainCells+=mark.size;
-          p.gainVir += clearMarked(p.grid, mark);   // kousky zmizí hned
-          p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
-          if(p.gainVir>0) p.animClear=26;
-          p.phase='clear'; p.phaseTimer=0;          // outline zůstane chvíli viset
-        } else {
-          finishResolve(p);
-        }
+    if(anyCanFall(p.grid)){
+      // padá stejnou rychlostí jako běžná kostička (bez tlačení dolů)
+      if(++p.phaseTimer>=dropIntervalNow()){ p.phaseTimer=0; gravityStep(p.grid); }
+    } else {
+      const {mark,runs}=findClears(p.grid);
+      if(mark.size>0){
+        p.chains++; p.gainCells+=mark.size;
+        p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
+        // smetí: barvy zničených řad/sloupců nad rámec prvního -> soupeři
+        for(let k=1;k<runs.length;k++) p.gainGarbage.push(runs[k]);
+        p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
+        if(p.gainVir>0) p.animClear=26;
+        p.phase='clear'; p.phaseTimer=0;            // outline zůstane chvíli viset
+      } else {
+        finishResolve(p);
       }
     }
   } else { // 'clear' — drž outline, pak zase padej
-    if(p.phaseTimer>=CLEAR_FRAMES){
-      p.flashes=[]; p.phase='settle'; p.phaseTimer=FALL_STEP;
-    }
+    if(++p.phaseTimer>=CLEAR_FRAMES){ p.flashes=[]; p.phase='settle'; p.phaseTimer=0; }
   }
 }
 function finishResolve(p){
   p.busy=false; p.flashes=[];
-  let gg=0;
-  if(p.gainCells>0) gg = Math.max(0,Math.floor(p.gainCells/4)-1) + Math.max(0,p.chains-1);
-  gg=Math.min(5,gg);
-  if(gg>0){ const o=other(p); o.pendingGarbage=Math.min(8,o.pendingGarbage+gg); }
+  if(p.gainGarbage.length){
+    const o=other(p);
+    for(const col of p.gainGarbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
+  }
   if(p.chains>1){ p.comboTimer=46; p.comboN=p.chains; }
   p.score += p.gainCells*10 + p.gainVir*50;
   p.virusCount=countViruses(p.grid);
@@ -487,7 +503,7 @@ function updatePlayer(p){
   if(mode!=='play') return;
   if(p.busy){ resolveStep(p); return; }      // animace padání / mazání
   if(!p.pill){
-    if(p.pendingGarbage>0){ dropGarbage(p); startResolve(p); return; }   // smetí spadne animovaně
+    if(p.pendingGarbage.length>0){ dropGarbage(p); startResolve(p); return; }   // smetí spadne animovaně
     p.virusCount=countViruses(p.grid);
     if(p.virusCount===0){ endGame(p,'win'); return; }
     const np=p.next; p.next=randPill();
@@ -593,8 +609,8 @@ function drawBoard(p,x0){
     const a=Math.min(1,p.comboTimer/20);
     T('KOMBO ×'+p.comboN, x0+BW/2, BY+BH/2, 11, 'rgba(248,215,126,'+a+')','center',true);
   }
-  if(p.pendingGarbage>0){
-    T('⚠ '+p.pendingGarbage, x0+BW/2, BY-6, 8, '#ff9d5d', 'center', true);
+  if(p.pendingGarbage.length>0){
+    T('⚠ '+p.pendingGarbage.length, x0+BW/2, BY-6, 8, '#ff9d5d', 'center', true);
   }
 }
 
@@ -826,21 +842,22 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyP'){ paused=!paused; return; }
   if(paused) return;
   const p1=players[0], p2=players[1];
+  const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
   switch(e.code){
     case 'KeyA': move(p1,-1); break;
     case 'KeyD': move(p1, 1); break;
     case 'KeyW': if(!e.repeat) rotate(p1); break;
     case 'KeyS': p1.softDrop=true; break;
-    case 'ArrowLeft':  if(!p2.ai) move(p2,-1); e.preventDefault(); break;
-    case 'ArrowRight': if(!p2.ai) move(p2, 1); e.preventDefault(); break;
-    case 'ArrowUp':    if(!p2.ai && !e.repeat) rotate(p2); e.preventDefault(); break;
-    case 'ArrowDown':  if(!p2.ai) p2.softDrop=true; e.preventDefault(); break;
+    case 'ArrowLeft':  move(pa,-1); e.preventDefault(); break;
+    case 'ArrowRight': move(pa, 1); e.preventDefault(); break;
+    case 'ArrowUp':    if(!e.repeat) rotate(pa); e.preventDefault(); break;
+    case 'ArrowDown':  pa.softDrop=true; e.preventDefault(); break;
   }
 });
 window.addEventListener('keyup', e=>{
   if(mode!=='play') return;
   if(e.code==='KeyS') players[0].softDrop=false;
-  if(e.code==='ArrowDown' && !players[1].ai) players[1].softDrop=false;
+  if(e.code==='ArrowDown') (players[1].ai?players[0]:players[1]).softDrop=false;
 });
 
 //================= USB OVLADAČE (Gamepad API) =================
@@ -874,7 +891,8 @@ function pollGamepads(){
       if(hit('confirm')) mode='menu';
     } else if(mode==='play' && !ending){
       if(hit('start')) paused=!paused;
-      const p = players[i];
+      let p = players[i];
+      if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
         if(hit('rotate')) rotate(p);
         p.softDrop = cur.down;
