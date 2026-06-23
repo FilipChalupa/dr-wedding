@@ -388,10 +388,11 @@ function dropGarbage(p){
   const q=p.pendingGarbage; p.pendingGarbage=[];
   for(const col of q){
     const c=(Math.random()*COLS)|0;
-    let target=-1;
-    for(let r=0;r<ROWS;r++){ if(p.grid[I(r,c)]){ target=r-1; break; } if(r===ROWS-1) target=ROWS-1; }
-    if(target<0) continue;
-    p.grid[I(target,c)] = {color:col, kind:'pill', partner:null};
+    // polož úplně nahoru (nejvyšší volné políčko) — animovaná gravitace pak nechá spadnout shora
+    let r=0;
+    while(r<ROWS && p.grid[I(r,c)]) r++;
+    if(r>=ROWS) continue;          // sloupec plný
+    p.grid[I(r,c)] = {color:col, kind:'pill', partner:null};
   }
 }
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
