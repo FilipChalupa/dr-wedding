@@ -628,12 +628,16 @@ function drawNext(p, cx){
 function drawLevelSel(y){
   const n=5, gap=11, dotsW=(n-1)*gap, x0=168;
   T('STAROSTI', x0-22, y+3, 8, '#cba6ec', 'right');
-  T('‹', x0-11, y+3.5, 10, '#6f6a8a', 'center');
   for(let i=0;i<n;i++){
     ctx.beginPath(); ctx.arc(x0+i*gap, y, 3.2, 0, 7);
     ctx.fillStyle = i<level ? '#f8d77e' : 'rgba(255,255,255,0.20)'; ctx.fill();
   }
-  T('›', x0+dotsW+11, y+3.5, 10, '#6f6a8a', 'center');
+  // šipky vertikálně vystředěné na tečky (middle baseline)
+  ctx.font='bold 11px "Courier New",monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#6f6a8a';
+  ctx.fillText('‹', x0-11, y);
+  ctx.fillText('›', x0+dotsW+11, y);
+  ctx.textBaseline='alphabetic';
 }
 
 function drawPlay(hideSide){
@@ -724,7 +728,7 @@ function drawOver(){
   drawCrown(wc, fy - 3.2*37.5, 1.3);
   const wname = winner.side==='L' ? 'ŽENICH' : 'NEVĚSTA';
   T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
-  if(frameCount%50<32) T('ENTER · hrát znovu', W/2, 228, 9, '#ffffff', 'center');
+  if(frameCount%50<32) T('hrát znovu', W/2, 228, 9, '#ffffff', 'center');
 }
 
 //================= LOOP =================
