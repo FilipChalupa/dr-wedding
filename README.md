@@ -16,6 +16,9 @@ Padají dvoubarevné kapsle. Srovnej **4 a více stejných barev** vedle sebe (v
 nebo svisle) a smažou se i s „starostmi" (svatební breberky). Kdo první vyčistí ze své
 sklenice všechny starosti, **vyhrává**. Komba posílají soupeři do sklenice smetí navíc.
 
+Před každým kolem proběhne odpočet **3·2·1**, nad sklenicí je vidět **náhled další kapsle**
+a hru lze kdykoli **pozastavit** (klávesa `P` nebo tlačítko Start na ovladači).
+
 Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 
 ### Ovládání
@@ -27,8 +30,14 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Otočit    | `W`            | `↑`              |
 | Dolů      | `S`            | `↓`              |
 
-V menu: nahoru/dolů (`W`/`S` nebo šipky, případně ovladač) přepíná mezi *dva hráči* a
-*vs počítač* (na trénink sólo) · `Enter` = start · `F` = fullscreen.
+Pauza ve hře: `P` (klávesnice) nebo **Start** (ovladač).
+
+V menu: nahoru/dolů (`W`/`S`, šipky nebo ovladač) přepíná mezi *dva hráči* a *vs počítač*
+(na trénink sólo); doleva/doprava (`A`/`D`, šipky nebo ovladač) nastavuje **počet starostí**
+(5 úrovní obtížnosti) · `Enter` (nebo A/Start na ovladači) = start · `F` = fullscreen.
+
+> Pozn.: hru nelze odstartovat ani ukončit kliknutím na obrazovku — slouží k tomu jen
+> klávesnice, ovladač, nebo tlačítko **START** pod televizí.
 
 ## Režim `?tv` (pro fyzickou televizi)
 
