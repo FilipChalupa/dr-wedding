@@ -181,7 +181,7 @@ let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
 let paused = false;
 const VIRUS_LEVELS = [4,6,8,11,15];     // počet starostí pro úrovně 1..5
-const COUNTDOWN_MS = 3000;              // 3 reálné sekundy
+const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
@@ -675,9 +675,11 @@ function drawPlay(hideSide){
 
   const cdRem = countdownEnd - performance.now();
   if(mode==='play' && cdRem>0){
+    const elapsed = COUNTDOWN_MS - cdRem;
+    const num = elapsed < 500 ? 3 : elapsed < 1500 ? 2 : 1;   // 3:0,5s · 2:1s · 1:1s
     ctx.fillStyle='rgba(6,8,20,0.45)'; ctx.fillRect(0,0,W,H);
-    T('PŘIPRAVTE SE', W/2, H/2-18, 11, '#cba6ec', 'center', true);
-    T(''+Math.ceil(cdRem/1000), W/2, H/2+18, 30, '#f8d77e', 'center', true);
+    T('PŘIPRAVTE SE', W/2, H/2-26, 11, '#cba6ec', 'center', true);
+    T(''+num, W/2, H/2+30, 60, '#f8d77e', 'center', true);
   }
   if(mode==='play' && paused){
     ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
