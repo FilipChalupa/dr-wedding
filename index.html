@@ -154,8 +154,8 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const W = 320, H = 240;
 
-const COLS = 6, ROWS = 12, CELL = 14;
-const LX0 = 64, RX0 = 172, BY = 46;            // board top-left positions
+const COLS = 8, ROWS = 16, CELL = 10;          // jako originální Dr. Mario
+const LX0 = 70, RX0 = 170, BY = 46;            // board top-left positions
 const BW = COLS*CELL, BH = ROWS*CELL;
 
 const COLORS = ['P','G','R'];
@@ -180,7 +180,7 @@ let frameCount = 0;
 let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
 let paused = false;
-const VIRUS_LEVELS = [4,6,8,11,15];     // počet starostí pro úrovně 1..5
+const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
@@ -321,9 +321,9 @@ function countSame(g,r,c,dr,dc,color){
 }
 function spawnViruses(g,n){
   let placed=0, att=0;
-  while(placed<n && att<2000){
+  while(placed<n && att<4000){
     att++;
-    const r = 4 + ((Math.random()*(ROWS-4))|0);
+    const r = 5 + ((Math.random()*(ROWS-5))|0);
     const c = (Math.random()*COLS)|0;
     const i = I(r,c); if(g[i]) continue;
     const color = randColor();
@@ -651,8 +651,8 @@ function drawPlay(hideSide){
   const jumpR = players[1].animClear>0 ? -Math.abs(Math.sin((26-players[1].animClear)*0.4))*9 : 0;
 
   if(!hideSide){
-    drawGroom(32, BY+BH-2 + bobL + jumpL, 3);
-    drawBride(288, BY+BH-2 + bobR + jumpR, 3);
+    drawGroom(34, BY+BH-2 + bobL + jumpL, 3);
+    drawBride(286, BY+BH-2 + bobR + jumpR, 3);
   }
 
   drawBoard(players[0], LX0);
