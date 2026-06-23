@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dr. Wedding</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    height:100%; width:100%;
+    background:#06060a;
+    background:radial-gradient(circle at 50% 35%, #15151f 0%, #08080c 60%, #000 100%);
+    overflow:hidden;
+    font-family:'Courier New',monospace;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#cdc8dd; user-select:none; -webkit-user-select:none;
+  }
+
+  /* ---- the TV cabinet ---- */
+  .tv {
+    position:relative;
+    padding:3.2vh 3.4vh 5.5vh 3.4vh;
+    border-radius:2.2vh;
+    background:linear-gradient(160deg,#5a4632 0%,#3a2c1d 35%,#241a11 100%);
+    box-shadow:
+      inset 0 0 2px rgba(255,220,180,.25),
+      inset 0 6px 14px rgba(0,0,0,.55),
+      0 14px 40px rgba(0,0,0,.8),
+      0 2px 0 rgba(255,255,255,.05);
+    border:2px solid #1a120a;
+  }
+  .tv::before { /* speaker / detail strip */
+    content:""; position:absolute; right:3.4vh; bottom:1.1vh;
+    width:5vh; height:2.6vh; border-radius:3px;
+    background:repeating-linear-gradient(90deg,#1a120a 0 2px,#3a2c1d 2px 4px);
+    box-shadow:inset 0 0 3px #000;
+  }
+  .brand {
+    position:absolute; left:3.6vh; bottom:1.4vh;
+    font-size:1.7vh; letter-spacing:.25vh; font-weight:bold;
+    color:#e7c98c; text-shadow:0 1px 0 #000; font-style:italic;
+  }
+  .led {
+    position:absolute; left:50%; transform:translateX(-50%); bottom:1.9vh;
+    width:1vh; height:1vh; border-radius:50%;
+    background:#ff5d5d; box-shadow:0 0 6px 2px rgba(255,80,80,.8);
+    animation:pulse 2.4s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+
+  /* ---- the screen ---- */
+  .screen {
+    position:relative;
+    width:min(86vw, 116vh);
+    aspect-ratio:4/3;
+    background:#000;
+    border-radius:6% / 8%;
+    overflow:hidden;
+    box-shadow:
+      inset 0 0 7vh rgba(0,0,0,.95),
+      inset 0 0 1.5vh rgba(0,0,0,1),
+      0 0 0 1.2vh #0c0c0c,
+      0 0 0 1.6vh #2a2a2a;
+  }
+  canvas {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    /* gentle CRT bulge */
+    transform:scale(1.012);
+  }
+  .scanlines {
+    position:absolute; inset:0; pointer-events:none; z-index:5;
+    background:repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 1px,
+      rgba(0,0,0,.22) 2px, rgba(0,0,0,.22) 3px);
+    mix-blend-mode:multiply;
+  }
+  .glow {
+    position:absolute; inset:0; pointer-events:none; z-index:6;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(120,160,255,.06), transparent 60%),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  .flicker {
+    position:absolute; inset:0; pointer-events:none; z-index:7;
+    background:rgba(180,200,255,.025);
+    animation:flick .12s steps(2) infinite;
+  }
+  @keyframes flick { 0%{opacity:.5} 50%{opacity:.9} 100%{opacity:.4} }
+
+  .controls {
+    margin-top:2.4vh; display:flex; gap:1.4vh; z-index:20;
+  }
+  .controls button {
+    font-family:inherit; font-size:1.7vh; font-weight:bold;
+    padding:.9vh 1.8vh; border-radius:1vh; cursor:pointer;
+    color:#1a120a; border:2px solid #1a120a;
+    background:linear-gradient(#f0d79a,#c9a85e);
+    box-shadow:0 2px 0 #1a120a; letter-spacing:.1vh;
+  }
+  .controls button:active { transform:translateY(2px); box-shadow:none; }
+
+  :fullscreen.tv, :-webkit-full-screen.tv {
+    width:100vw; height:100vh; border-radius:0;
+    display:flex; align-items:center; justify-content:center;
+    padding:0; background:#000;
+  }
+  :fullscreen.tv .screen, :-webkit-full-screen.tv .screen {
+    width:min(100vw,133.333vh); height:auto;
+    border-radius:0; box-shadow:inset 0 0 9vh rgba(0,0,0,.95);
+  }
+  :fullscreen.tv .brand, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
+</style>
+</head>
+<body>
+  <div class="tv" id="tv">
+    <div class="screen">
+      <canvas id="game" width="320" height="240"></canvas>
+      <div class="scanlines"></div>
+      <div class="glow"></div>
+      <div class="flicker"></div>
+    </div>
+    <div class="brand">WEDDITRON&nbsp;//&nbsp;MODEL&nbsp;DW-1</div>
+    <div class="led"></div>
+  </div>
+  <div class="controls">
+    <button id="btnStart">▶ START</button>
+    <button id="btnFull">⛶ FULLSCREEN</button>
+  </div>
+
+<script>
+//================= SETUP =================
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = 320, H = 240;
+
+const COLS = 6, ROWS = 12, CELL = 14;
+const LX0 = 64, RX0 = 172, BY = 46;            // board top-left positions
+const BW = COLS*CELL, BH = ROWS*CELL;
+
+const COLORS = ['P','G','R'];
+const PAL = {
+  P:{c:'#a25ddc',l:'#cba6ec',d:'#5f2f97'},   // fialová (motýlek)
+  G:{c:'#f0b53a',l:'#f8d77e',d:'#aa7a12'},   // zlatá / šampaňské
+  R:{c:'#ef5f93',l:'#f8a8c4',d:'#b03363'},   // růžová
+};
+const DIR = {U:[-1,0],D:[1,0],L:[0,-1],R:[0,1]};
+const OPP = {U:'D',D:'U',L:'R',R:'L'};
+const OFF = {0:[0,1],1:[-1,0],2:[0,-1],3:[1,0]};     // orient -> second-cell offset
+const ODIR = {0:'R',1:'U',2:'L',3:'D'};               // orient -> pivot partner dir
+
+const I = (r,c)=> r*COLS+c;
+
+//================= GAME STATE =================
+let mode = 'menu';        // 'menu' | 'play' | 'over'
+let players = [];
+let winner = null;
+let pendingAI = false;    // false = 2 hráči, true = vs počítač
+let frameCount = 0;
+
+function randColor(){ return COLORS[(Math.random()*3)|0]; }
+function randPill(){ return {ca:randColor(), cb:randColor()}; }
+
+function newPlayer(side){
+  return {
+    side,                       // 'L' groom, 'R' bride
+    grid:new Array(COLS*ROWS).fill(null),
+    pill:null, next:randPill(),
+    dropTimer:0, dropInterval:42, softDrop:false,
+    virusCount:0, pendingGarbage:0,
+    flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
+    score:0,
+    ai:false, aiPlan:null, aiTimer:0,
+  };
+}
+
+function other(p){ return players[0]===p ? players[1] : players[0]; }
+
+//================= BOARD LOGIC =================
+function cellsOf(pill){
+  const [dr,dc] = OFF[pill.orient];
+  const d = ODIR[pill.orient];
+  return [
+    {r:pill.r,      c:pill.c,      color:pill.ca, partner:d},
+    {r:pill.r+dr,   c:pill.c+dc,   color:pill.cb, partner:OPP[d]},
+  ];
+}
+function canPlace(g, pill){
+  for(const cl of cellsOf(pill)){
+    if(cl.c<0 || cl.c>=COLS) return false;
+    if(cl.r>=ROWS) return false;
+    if(cl.r>=0 && g[I(cl.r,cl.c)]) return false;
+  }
+  return true;
+}
+function placeInto(g, pill){
+  for(const cl of cellsOf(pill)){
+    if(cl.r>=0) g[I(cl.r,cl.c)] = {color:cl.color, kind:'pill', partner:cl.partner};
+  }
+}
+function countViruses(g){ let n=0; for(const c of g) if(c&&c.kind==='virus') n++; return n; }
+
+function findClears(g){
+  const mark = new Set();
+  for(let r=0;r<ROWS;r++){
+    let run=1;
+    for(let c=1;c<=COLS;c++){
+      const a = c<COLS ? g[I(r,c)] : null, b = g[I(r,c-1)];
+      if(a&&b&&a.color===b.color) run++;
+      else { if(run>=4) for(let k=c-run;k<c;k++) mark.add(I(r,k)); run=1; }
+    }
+  }
+  for(let c=0;c<COLS;c++){
+    let run=1;
+    for(let r=1;r<=ROWS;r++){
+      const a = r<ROWS ? g[I(r,c)] : null, b = g[I(r-1,c)];
+      if(a&&b&&a.color===b.color) run++;
+      else { if(run>=4) for(let k=r-run;k<r;k++) mark.add(I(k,c)); run=1; }
+    }
+  }
+  return mark;
+}
+function clearMarked(g, mark){
+  let virus=0;
+  mark.forEach(idx=>{
+    const cell = g[idx]; if(!cell) return;
+    if(cell.partner){
+      const [dr,dc] = DIR[cell.partner];
+      const r=(idx/COLS)|0, c=idx%COLS, nr=r+dr, nc=c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){
+        const nb=g[I(nr,nc)];
+        if(nb && nb.partner===OPP[cell.partner]) nb.partner=null;
+      }
+    }
+    if(cell.kind==='virus') virus++;
+    g[idx]=null;
+  });
+  return virus;
+}
+function gravity(g){
+  let pass=true;
+  while(pass){
+    pass=false;
+    const visited=new Array(g.length).fill(false);
+    const groups=[];
+    for(let r=ROWS-1;r>=0;r--) for(let c=0;c<COLS;c++){
+      const i=I(r,c), cell=g[i];
+      if(cell && cell.kind==='pill' && !visited[i]){
+        const grp=[{r,c,i}]; visited[i]=true;
+        if(cell.partner){
+          const [dr,dc]=DIR[cell.partner], nr=r+dr, nc=c+dc;
+          if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS){
+            const ni=I(nr,nc);
+            if(g[ni]&&g[ni].kind==='pill'&&!visited[ni]){ grp.push({r:nr,c:nc,i:ni}); visited[ni]=true; }
+          }
+        }
+        groups.push(grp);
+      }
+    }
+    const movers=[];
+    for(const grp of groups){
+      let canFall=true;
+      for(const cl of grp){
+        const br=cl.r+1;
+        if(br>=ROWS){ canFall=false; break; }
+        const bi=I(br,cl.c);
+        if(g[bi] && !grp.some(x=>x.i===bi)){ canFall=false; break; }
+      }
+      if(canFall) for(const cl of grp) movers.push({obj:g[cl.i], from:cl.i, to:I(cl.r+1,cl.c)});
+    }
+    if(movers.length){
+      for(const m of movers) g[m.from]=null;
+      for(const m of movers) g[m.to]=m.obj;
+      pass=true;
+    }
+  }
+}
+function resolveFull(g){
+  gravity(g);
+  let totalVirus=0, cells=0, chains=0; const cleared=[];
+  while(true){
+    const mark=findClears(g);
+    if(mark.size===0) break;
+    chains++; cells+=mark.size;
+    mark.forEach(idx=> cleared.push({r:(idx/COLS)|0, c:idx%COLS}));
+    totalVirus += clearMarked(g, mark);
+    gravity(g);
+  }
+  return {totalVirus, cells, chains, cleared};
+}
+
+function countSame(g,r,c,dr,dc,color){
+  let n=0,rr=r+dr,cc=c+dc;
+  while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&g[I(rr,cc)]&&g[I(rr,cc)].color===color){ n++; rr+=dr; cc+=dc; }
+  return n;
+}
+function spawnViruses(g,n){
+  let placed=0, att=0;
+  while(placed<n && att<2000){
+    att++;
+    const r = 4 + ((Math.random()*(ROWS-4))|0);
+    const c = (Math.random()*COLS)|0;
+    const i = I(r,c); if(g[i]) continue;
+    const color = randColor();
+    if(countSame(g,r,c,0,-1,color)+countSame(g,r,c,0,1,color) >= 2) continue;
+    if(countSame(g,r,c,-1,0,color)+countSame(g,r,c,1,0,color) >= 2) continue;
+    g[i] = {color, kind:'virus', partner:null};
+    placed++;
+  }
+}
+
+//================= MOVES =================
+function move(p,d){ if(!p.pill) return; const np={...p.pill,c:p.pill.c+d}; if(canPlace(p.grid,np)) p.pill=np; }
+function rotate(p){
+  if(!p.pill) return;
+  const no=(p.pill.orient+1)%4;
+  for(const k of [{},{c:p.pill.c-1},{c:p.pill.c+1},{r:p.pill.r-1}]){
+    const np={...p.pill,orient:no,...k};
+    if(canPlace(p.grid,np)){ p.pill=np; return; }
+  }
+}
+function lock(p){
+  const cells=cellsOf(p.pill);
+  if(cells.some(c=>c.r<0)){ endGame(p,'lose'); return; }
+  placeInto(p.grid,p.pill);
+  p.pill=null;
+  const res=resolveFull(p.grid);
+  for(const cl of res.cleared) p.flashes.push({r:cl.r,c:cl.c,t:12});
+  if(res.totalVirus>0) p.animClear=26;
+  if(res.chains>1){ p.comboTimer=46; p.comboN=res.chains; }
+  p.score += res.cells*10 + res.totalVirus*50;
+  let gg=0;
+  if(res.cells>0) gg = Math.max(0,Math.floor(res.cells/4)-1) + Math.max(0,res.chains-1);
+  gg=Math.min(5,gg);
+  if(gg>0){ const o=other(p); o.pendingGarbage=Math.min(8,o.pendingGarbage+gg); }
+  p.virusCount=countViruses(p.grid);
+  if(p.virusCount===0) endGame(p,'win');
+}
+function applyGarbage(p){
+  const n=p.pendingGarbage; p.pendingGarbage=0;
+  for(let k=0;k<n;k++){
+    const c=(Math.random()*COLS)|0;
+    let target=-1;
+    for(let r=0;r<ROWS;r++){ if(p.grid[I(r,c)]){ target=r-1; break; } if(r===ROWS-1) target=ROWS-1; }
+    if(target<0) continue;
+    p.grid[I(target,c)] = {color:randColor(), kind:'pill', partner:null};
+  }
+  if(n>0){
+    const res=resolveFull(p.grid);
+    for(const cl of res.cleared) p.flashes.push({r:cl.r,c:cl.c,t:12});
+  }
+}
+
+function endGame(p,res){
+  if(mode==='over') return;
+  mode='over';
+  winner = (res==='win') ? p : other(p);
+  winner.celebrate=0;
+}
+
+//================= AI =================
+function gridClone(g){ return g.map(c=> c?{...c}:null); }
+function topHeight(g){
+  let h=0;
+  for(let c=0;c<COLS;c++){ for(let r=0;r<ROWS;r++){ if(g[I(r,c)]){ h=Math.max(h,ROWS-r); break; } } }
+  return h;
+}
+function countHoles(g){
+  let holes=0;
+  for(let c=0;c<COLS;c++){
+    let seen=false;
+    for(let r=0;r<ROWS;r++){ if(g[I(r,c)]) seen=true; else if(seen) holes++; }
+  }
+  return holes;
+}
+function computeAiPlan(p){
+  let best={score:-1e9, col:(COLS/2|0)-1, orient:0};
+  for(let o=0;o<4;o++) for(let c=0;c<COLS;c++){
+    let pill={r:0,c,orient:o,ca:p.pill.ca,cb:p.pill.cb};
+    if(!canPlace(p.grid,pill)) continue;
+    while(canPlace(p.grid,{...pill,r:pill.r+1})) pill={...pill,r:pill.r+1};
+    if(cellsOf(pill).some(cl=>cl.r<0)) continue;
+    const g=gridClone(p.grid);
+    placeInto(g,pill);
+    const res=resolveFull(g);
+    const score = res.totalVirus*1000 + res.cells*8 - topHeight(g)*4 - countHoles(g)*9 + pill.r*2;
+    if(score>best.score) best={score,col:c,orient:o};
+  }
+  return best;
+}
+function aiThink(p){
+  if(!p.pill) return;
+  p.softDrop=false;
+  if(!p.aiPlan) p.aiPlan=computeAiPlan(p);
+  const pl=p.aiPlan;
+  if(p.aiTimer>0){ p.aiTimer--; if(p.pill.orient===pl.orient && p.pill.c===pl.col) p.softDrop=true; return; }
+  p.aiTimer=4;
+  if(p.pill.orient!==pl.orient) rotate(p);
+  else if(p.pill.c<pl.col) move(p,1);
+  else if(p.pill.c>pl.col) move(p,-1);
+  else p.softDrop=true;
+}
+
+//================= UPDATE =================
+function startGame(ai){
+  players=[newPlayer('L'), newPlayer('R')];
+  for(const p of players){ spawnViruses(p.grid,7); p.virusCount=countViruses(p.grid); }
+  players[1].ai = ai;
+  winner=null;
+  mode='play';
+}
+function updatePlayer(p){
+  if(mode!=='play') return;
+  if(!p.pill){
+    applyGarbage(p);
+    p.virusCount=countViruses(p.grid);
+    if(p.virusCount===0){ endGame(p,'win'); return; }
+    const np=p.next; p.next=randPill();
+    p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
+    p.aiPlan=null;
+    if(!canPlace(p.grid,p.pill)){ p.pill=null; endGame(p,'lose'); return; }
+    p.dropTimer=0;
+  }
+  if(p.ai) aiThink(p);
+  p.dropTimer += p.softDrop ? 7 : 1;
+  if(p.dropTimer>=p.dropInterval){
+    p.dropTimer=0;
+    const np={...p.pill,r:p.pill.r+1};
+    if(canPlace(p.grid,np)) p.pill=np; else lock(p);
+  }
+}
+function update(){
+  for(const p of players) updatePlayer(p);
+  for(const p of players){
+    p.flashes = p.flashes.filter(f=>{ f.t--; return f.t>0; });
+    if(p.comboTimer>0) p.comboTimer--;
+    if(p.animClear>0) p.animClear--;
+  }
+}
+
+//================= RENDER =================
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function T(t,x,y,size,color,align='center',bold=false){
+  ctx.font=(bold?'bold ':'')+size+'px "Courier New",monospace';
+  ctx.textAlign=align; ctx.textBaseline='alphabetic';
+  ctx.fillStyle=color; ctx.fillText(t,x,y);
+}
+function bgScreen(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#1a2140'); g.addColorStop(1,'#0a0d1c');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+function drawCell(x,y,cell,white){
+  if(white){ ctx.fillStyle='#ffffff'; rr(x+1,y+1,CELL-2,CELL-2,3); ctx.fill(); return; }
+  const p=PAL[cell.color];
+  if(cell.kind==='virus'){
+    ctx.fillStyle=p.d; rr(x+1.5,y+1.5,CELL-3,CELL-3,4); ctx.fill();
+    ctx.fillStyle=p.c; rr(x+2.5,y+2.5,CELL-5,CELL-5,3); ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.fillRect(x+CELL*0.28,y+CELL*0.36,2,2.4);
+    ctx.fillRect(x+CELL*0.58,y+CELL*0.36,2,2.4);
+    ctx.fillStyle='#1a0a14';
+    ctx.fillRect(x+CELL*0.30,y+CELL*0.44,1.4,1.4);
+    ctx.fillRect(x+CELL*0.60,y+CELL*0.44,1.4,1.4);
+    ctx.fillStyle='#2a0c1a'; ctx.fillRect(x+CELL*0.34,y+CELL*0.66,CELL*0.34,1.4);
+  } else {
+    ctx.fillStyle=p.c; rr(x+1,y+1,CELL-2,CELL-2,4); ctx.fill();
+    ctx.fillStyle=p.l; rr(x+2.6,y+2.6,CELL*0.32,CELL*0.32,2); ctx.fill();
+  }
+}
+function drawBoard(p,x0){
+  ctx.fillStyle='#0c1226'; ctx.fillRect(x0,BY,BW,BH);
+  ctx.strokeStyle='rgba(255,255,255,0.045)'; ctx.lineWidth=1;
+  for(let c=1;c<COLS;c++){ ctx.beginPath(); ctx.moveTo(x0+c*CELL,BY); ctx.lineTo(x0+c*CELL,BY+BH); ctx.stroke(); }
+  for(let r=1;r<ROWS;r++){ ctx.beginPath(); ctx.moveTo(x0,BY+r*CELL); ctx.lineTo(x0+BW,BY+r*CELL); ctx.stroke(); }
+
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell=p.grid[I(r,c)];
+    if(cell) drawCell(x0+c*CELL, BY+r*CELL, cell, false);
+  }
+  for(const f of p.flashes){ if(f.t%4<2) drawCell(x0+f.c*CELL, BY+f.r*CELL, null, true); }
+  if(p.pill){
+    for(const cl of cellsOf(p.pill)){
+      if(cl.r>=0) drawCell(x0+cl.c*CELL, BY+cl.r*CELL, {color:cl.color,kind:'pill'}, false);
+    }
+  }
+  // glass frame
+  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2;
+  rr(x0-2.5,BY-1,BW+5,BH+3,3); ctx.stroke();
+  ctx.fillStyle='rgba(200,224,255,0.5)'; ctx.fillRect(x0-5,BY-5,BW+10,3);
+  ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(x0+2,BY+2,3,BH-6);
+
+  if(p.comboTimer>0){
+    const a=Math.min(1,p.comboTimer/20);
+    T('KOMBO ×'+p.comboN, x0+BW/2, BY+BH/2, 11, 'rgba(248,215,126,'+a+')','center',true);
+  }
+  if(p.pendingGarbage>0){
+    T('⚠ '+p.pendingGarbage, x0+BW/2, BY-6, 8, '#ff9d5d', 'center', true);
+  }
+}
+
+//---- pixel-art people ----
+function person(cx, feetY, s, draw){
+  const r=(x,y,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(Math.round(cx+x*s), Math.round(feetY-y*s), Math.ceil(w*s), Math.ceil(h*s)); };
+  // r(xLeft, yTop, w, h) : yTop = units above feet of the rect's top edge
+  draw(r);
+}
+function drawGroom(cx, feetY, s){
+  person(cx,feetY,s,(r)=>{
+    // shoes + legs
+    r(-5,2,4,2,'#15110a'); r(1,2,4,2,'#15110a');
+    r(-5,10,4,8,'#34373f'); r(1,10,4,8,'#34373f');
+    // suit torso
+    r(-7,22,14,12,'#62666f');
+    r(-2,21,4,11,'#f2efe6');          // shirt
+    // arms
+    r(-10,21,3,11,'#62666f'); r(7,21,3,11,'#62666f');
+    r(-10,12,3,2,'#f1c9a5'); r(7,12,3,2,'#f1c9a5'); // hands
+    // bowtie (fialový)
+    r(-3,22,6,3,'#a25ddc'); r(-0.7,22.5,1.4,2,'#7a3eb0');
+    // neck + head
+    r(-2,24,4,2,'#f1c9a5');
+    r(-6,34,12,10,'#f1c9a5');
+    // short dark-blonde hair (4 cm)
+    r(-7,36,14,3.5,'#8a6b3f');
+    r(-7,33,2,3,'#8a6b3f'); r(5,33,2,3,'#8a6b3f');
+    // face
+    r(-4,30,2,2,'#27201a'); r(2,30,2,2,'#27201a');
+    r(-2.5,27,5,1,'#b56a5a');
+  });
+}
+function drawBride(cx, feetY, s){
+  person(cx,feetY,s,(r)=>{
+    // flared white dress
+    r(-9,4,18,4,'#f4f0ea');
+    r(-7.5,8,15,4,'#efe9df');
+    r(-6,12,12,4,'#f4f0ea');
+    r(-4.5,18,9,6,'#efe9df');
+    // arms
+    r(-7,21,2.5,9,'#f1c9a5'); r(4.5,21,2.5,9,'#f1c9a5');
+    // bouquet
+    r(-2.5,13,5,2,'#5f8a45');
+    r(-3,16,2,2,PAL.P.c); r(-0.5,16.5,2,2,PAL.R.c); r(1.5,16,2,2,PAL.G.c);
+    // neck + head
+    r(-2,24,4,2,'#f1c9a5');
+    r(-6,34,12,10,'#f1c9a5');
+    // shoulder-length dark-blonde hair
+    r(-7.5,36,15,4,'#9a7944');
+    r(-8,36,2.5,13,'#9a7944'); r(5.5,36,2.5,13,'#9a7944');
+    r(-7,35,14,2,'#86683a');
+    // face
+    r(-4,30,2,2,'#27201a'); r(2,30,2,2,'#27201a');
+    r(-2,27,4,1,'#cf6f7e');
+    r(-5,28,1.5,1.5,'#f0a0a0'); r(3.5,28,1.5,1.5,'#f0a0a0'); // blush
+  });
+}
+function drawCrown(cx, topY, s){
+  ctx.fillStyle='#ffd94a';
+  ctx.fillRect(cx-7,topY,14,3);
+  for(const dx of [-7,-2,3]){ ctx.beginPath(); ctx.moveTo(cx+dx,topY); ctx.lineTo(cx+dx+2,topY-5); ctx.lineTo(cx+dx+4,topY); ctx.fill(); }
+  ctx.fillStyle='#fff6c8'; ctx.fillRect(cx-1,topY+3,2,1);
+}
+function heart(x,y,sz,col){
+  ctx.fillStyle=col;
+  ctx.beginPath();
+  ctx.moveTo(x,y+sz*0.3);
+  ctx.bezierCurveTo(x,y,x-sz,y,x-sz,y+sz*0.35);
+  ctx.bezierCurveTo(x-sz,y+sz*0.7,x,y+sz*0.9,x,y+sz*1.15);
+  ctx.bezierCurveTo(x,y+sz*0.9,x+sz,y+sz*0.7,x+sz,y+sz*0.35);
+  ctx.bezierCurveTo(x+sz,y,x,y,x,y+sz*0.3);
+  ctx.fill();
+}
+
+function drawPlay(){
+  bgScreen();
+  T('DR. WEDDING', W/2, 14, 13, '#f8d77e', 'center', true);
+  heart(W/2-44, 6, 4, '#ef5f93'); heart(W/2+44, 6, 4, '#ef5f93');
+
+  const bobL = Math.sin(frameCount*0.09)*1.5;
+  const bobR = Math.sin(frameCount*0.09 + 1)*1.5;
+  const jumpL = players[0].animClear>0 ? -Math.abs(Math.sin((26-players[0].animClear)*0.4))*9 : 0;
+  const jumpR = players[1].animClear>0 ? -Math.abs(Math.sin((26-players[1].animClear)*0.4))*9 : 0;
+
+  drawGroom(32, BY+BH-2 + bobL + jumpL, 3);
+  drawBride(288, BY+BH-2 + bobR + jumpR, 3);
+
+  drawBoard(players[0], LX0);
+  drawBoard(players[1], RX0);
+
+  T('ŽENICH',  LX0+BW/2, BY-9, 9, '#cba6ec', 'center', true);
+  T('NEVĚSTA', RX0+BW/2, BY-9, 9, '#f8a8c4', 'center', true);
+  T('STAROSTI: '+players[0].virusCount, LX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
+  T('STAROSTI: '+players[1].virusCount, RX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
+
+  // center heart / vs
+  heart(W/2, BY+BH/2-14, 6, frameCount%40<20 ? '#ff5d8a':'#ef5f93');
+  T('VS', W/2, BY+BH/2+12, 9, '#f8d77e', 'center', true);
+}
+
+function drawMenu(){
+  bgScreen();
+  T('DR. WEDDING', W/2, 50, 24, '#f8d77e', 'center', true);
+  heart(W/2-92, 40, 6, '#ef5f93'); heart(W/2+92, 40, 6, '#ef5f93');
+  T('retro svatební duel pro dva', W/2, 68, 9, '#cba6ec', 'center');
+
+  const fy=170, bob=Math.sin(frameCount*0.1)*1.5;
+  drawGroom(108, fy+bob, 2.6);
+  drawBride(212, fy-bob, 2.6);
+  heart(160, 118+Math.sin(frameCount*0.12)*3, 6, '#ff5d8a');
+
+  const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
+  const c2 = pendingAI ? '#f8d77e' : '#7a7a8a';
+  T((pendingAI?'  ':'▶ ')+'1 · DVA HRÁČI', W/2, 196, 10, c1, 'center', !pendingAI);
+  T((pendingAI?'▶ ':'  ')+'2 · VS POČÍTAČ', W/2, 210, 10, c2, 'center', pendingAI);
+
+  if(frameCount%50<32) T('— stiskni ENTER pro start —', W/2, 230, 9, '#ffffff', 'center', true);
+}
+
+function drawOver(){
+  drawPlay();
+  ctx.fillStyle='rgba(6,8,20,0.78)'; ctx.fillRect(0,0,W,H);
+  T('PRÁVĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
+
+  for(let i=0;i<8;i++){
+    const a=(frameCount*0.02 + i);
+    const x=W/2 + Math.cos(a)* (60+i*4);
+    const y=70 + ((frameCount*0.8 + i*30)%150);
+    heart(x, y, 4, i%2?'#ef5f93':'#a25ddc');
+  }
+
+  const fy=178;
+  drawGroom(138, fy, 3.2);
+  drawBride(182, fy, 3.2);
+  heart(160, 108, 7, frameCount%30<15?'#ff5d8a':'#ef5f93');
+
+  const wc = winner.side==='L' ? 138 : 182;
+  drawCrown(wc, fy-3.2*44-2, 1.1);
+  const wname = winner.side==='L' ? 'ŽENICH' : 'NEVĚSTA';
+  T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
+  if(frameCount%50<32) T('ENTER · hrát znovu', W/2, 228, 9, '#ffffff', 'center');
+}
+
+//================= LOOP =================
+function frame(){
+  frameCount++;
+  if(mode==='play') update();
+  if(mode==='menu') drawMenu();
+  else if(mode==='play') drawPlay();
+  else drawOver();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+//================= INPUT =================
+window.addEventListener('keydown', e=>{
+  if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
+
+  if(mode==='menu'){
+    if(e.code==='Digit1'||e.code==='Numpad1') pendingAI=false;
+    else if(e.code==='Digit2'||e.code==='Numpad2') pendingAI=true;
+    else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') startGame(pendingAI);
+    return;
+  }
+  if(mode==='over'){
+    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') mode='menu';
+    return;
+  }
+  // play
+  const p1=players[0], p2=players[1];
+  switch(e.code){
+    case 'KeyA': move(p1,-1); break;
+    case 'KeyD': move(p1, 1); break;
+    case 'KeyW': if(!e.repeat) rotate(p1); break;
+    case 'KeyS': p1.softDrop=true; break;
+    case 'ArrowLeft':  if(!p2.ai) move(p2,-1); e.preventDefault(); break;
+    case 'ArrowRight': if(!p2.ai) move(p2, 1); e.preventDefault(); break;
+    case 'ArrowUp':    if(!p2.ai && !e.repeat) rotate(p2); e.preventDefault(); break;
+    case 'ArrowDown':  if(!p2.ai) p2.softDrop=true; e.preventDefault(); break;
+  }
+});
+window.addEventListener('keyup', e=>{
+  if(mode!=='play') return;
+  if(e.code==='KeyS') players[0].softDrop=false;
+  if(e.code==='ArrowDown' && !players[1].ai) players[1].softDrop=false;
+});
+
+// touch / click to advance menus
+cv.addEventListener('pointerdown', ()=>{
+  if(mode==='menu') startGame(pendingAI);
+  else if(mode==='over') mode='menu';
+});
+
+//================= FULLSCREEN =================
+function toggleFull(){
+  const tv=document.getElementById('tv');
+  if(!document.fullscreenElement){
+    (tv.requestFullscreen||tv.webkitRequestFullscreen).call(tv);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen).call(document);
+  }
+}
+document.getElementById('btnFull').addEventListener('click', toggleFull);
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  if(mode==='menu') startGame(pendingAI); else mode='menu';
+});
+</script>
+</body>
+</html>
