@@ -413,12 +413,11 @@ function aiThink(p){
   p.softDrop=false;
   if(!p.aiPlan) p.aiPlan=computeAiPlan(p);
   const pl=p.aiPlan;
-  if(p.aiTimer>0){ p.aiTimer--; if(p.pill.orient===pl.orient && p.pill.c===pl.col) p.softDrop=true; return; }
+  if(p.aiTimer>0){ p.aiTimer--; return; }
   p.aiTimer=4;
   if(p.pill.orient!==pl.orient) rotate(p);
   else if(p.pill.c<pl.col) move(p,1);
   else if(p.pill.c>pl.col) move(p,-1);
-  else p.softDrop=true;
 }
 
 //================= UPDATE =================
