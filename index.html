@@ -179,9 +179,12 @@ let pendingAI = false;    // false = 2 hráči, true = vs počítač
 let frameCount = 0;
 let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
+let gameStart = 0;                      // čas (ms) začátku hraní (po odpočtu)
 let paused = false;
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
+// pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
+const DROP_START = 95, DROP_MIN = 22, DROP_RAMP = 0.8;
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
@@ -191,7 +194,7 @@ function newPlayer(side){
     side,                       // 'L' groom, 'R' bride
     grid:new Array(COLS*ROWS).fill(null),
     pill:null, next:randPill(),
-    dropTimer:0, dropInterval:42, softDrop:false,
+    dropTimer:0, softDrop:false,
     virusCount:0, pendingGarbage:0,
     flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
     score:0,
@@ -435,7 +438,12 @@ function startGame(ai){
   winner=null;
   paused=false;
   countdownEnd=performance.now()+COUNTDOWN_MS;
+  gameStart=countdownEnd;
   mode='play';
+}
+function dropIntervalNow(){
+  const sec = Math.max(0, (performance.now()-gameStart)/1000);
+  return Math.max(DROP_MIN, DROP_START - sec*DROP_RAMP);
 }
 function updatePlayer(p){
   if(mode!=='play') return;
@@ -451,7 +459,7 @@ function updatePlayer(p){
   }
   if(p.ai) aiThink(p);
   p.dropTimer += p.softDrop ? 7 : 1;
-  if(p.dropTimer>=p.dropInterval){
+  if(p.dropTimer>=dropIntervalNow()){
     p.dropTimer=0;
     const np={...p.pill,r:p.pill.r+1};
     if(canPlace(p.grid,np)) p.pill=np; else lock(p);
