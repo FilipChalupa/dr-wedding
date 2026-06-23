@@ -678,6 +678,7 @@ function drawOver(){
 //================= LOOP =================
 function frame(){
   frameCount++;
+  pollGamepads();
   if(mode==='play') update();
   if(mode==='menu') drawMenu();
   else if(mode==='play') drawPlay();
@@ -724,6 +725,52 @@ cv.addEventListener('pointerdown', ()=>{
   if(mode==='menu') startGame(pendingAI);
   else if(mode==='over') mode='menu';
 });
+
+//================= USB OVLADAČE (Gamepad API) =================
+// Ovladač 0 -> Ženich, ovladač 1 -> Nevěsta. Klávesy WASD/šipky fungují dál.
+const padPrev = {};      // index -> minulý stav (pro detekci stisku)
+const padRepeat = {};    // index -> {dir,timer} pro plynulé držení doleva/doprava
+function readPad(gp){
+  const b = i => gp.buttons[i] && gp.buttons[i].pressed;
+  const ax = gp.axes || [];
+  const lx = ax[0]||0, ly = ax[1]||0;
+  const up=b(12)||ly<-0.5, down=b(13)||ly>0.5, left=b(14)||lx<-0.5, right=b(15)||lx>0.5;
+  return {
+    up, down, left, right,
+    rotate:  b(0)||b(1)||b(2)||b(3)||up,   // jakékoli tlačítko nebo nahoru = otočit
+    confirm: b(0)||b(9),                    // A nebo Start
+  };
+}
+function pollGamepads(){
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for(let i=0;i<pads.length;i++){
+    const gp = pads[i]; if(!gp) continue;
+    const cur = readPad(gp), prev = padPrev[i] || {};
+    const hit = k => cur[k] && !prev[k];
+
+    if(mode==='menu'){
+      if(hit('up')||hit('down')||hit('left')||hit('right')) pendingAI = !pendingAI;
+      if(hit('confirm')) startGame(pendingAI);
+    } else if(mode==='over'){
+      if(hit('confirm')) mode='menu';
+    } else if(mode==='play'){
+      const p = players[i];
+      if(p && !p.ai){
+        if(hit('rotate')) rotate(p);
+        p.softDrop = cur.down;
+        const dir = cur.left ? -1 : cur.right ? 1 : 0;
+        const rep = padRepeat[i] || {dir:0,timer:0};
+        if(dir!==0){
+          if(rep.dir!==dir){ move(p,dir); rep.dir=dir; rep.timer=16; }   // počáteční prodleva
+          else if(--rep.timer<=0){ move(p,dir); rep.timer=6; }           // opakování při držení
+        } else { rep.dir=0; rep.timer=0; }
+        padRepeat[i] = rep;
+      }
+    }
+    padPrev[i] = cur;
+  }
+}
+window.addEventListener('gamepadconnected', ()=>{});
 
 //================= FULLSCREEN =================
 function toggleFull(){
