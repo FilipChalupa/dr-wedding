@@ -394,7 +394,7 @@ function dropGarbage(p){
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
 function startResolve(p){
   p.busy=true; p.phase='settle'; p.phaseTimer=0;
-  p.chains=0; p.gainCells=0; p.gainVir=0; p.gainGarbage=[]; p.flashes=[];
+  p.chains=0; p.gainCells=0; p.gainVir=0; p.gainGarbage=[]; p.firstCleared=false; p.flashes=[];
 }
 function resolveStep(p){
   if(p.phase==='settle'){
@@ -406,8 +406,12 @@ function resolveStep(p){
       if(mark.size>0){
         p.chains++; p.gainCells+=mark.size;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
-        // smetí: barvy zničených řad/sloupců nad rámec prvního -> soupeři
-        for(let k=1;k<runs.length;k++) p.gainGarbage.push(runs[k]);
+        // smetí: zdarma je jen úplně první linie; vše ostatní (víc linií v kroku
+        // i celé combo/řetěz) pošle svou barvu soupeři jako samostatnou kostičku
+        for(const col of runs){
+          if(!p.firstCleared){ p.firstCleared=true; continue; }
+          p.gainGarbage.push(col);
+        }
         p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
         if(p.gainVir>0) p.animClear=26;
         p.phase='clear'; p.phaseTimer=0;            // outline zůstane chvíli viset
