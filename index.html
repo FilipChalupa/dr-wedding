@@ -205,13 +205,17 @@ function newPlayer(side){
 function other(p){ return players[0]===p ? players[1] : players[0]; }
 
 //================= BOARD LOGIC =================
+// pill.r = spodní řada, pill.c = levý sloupec. Spodek zůstává na místě:
+// vodorovná poloha je vždy v řadě r, svislá poloha roste nahoru (r, r-1).
+// Svislé orientace střídají pravý / levý sloupec (pohyb do boků).
 function cellsOf(pill){
-  const [dr,dc] = OFF[pill.orient];
-  const d = ODIR[pill.orient];
-  return [
-    {r:pill.r,      c:pill.c,      color:pill.ca, partner:d},
-    {r:pill.r+dr,   c:pill.c+dc,   color:pill.cb, partner:OPP[d]},
-  ];
+  const {r,c,orient,ca,cb}=pill;
+  switch(orient){
+    case 0:  return [{r,     c,     color:ca, partner:'R'}, {r,     c:c+1, color:cb, partner:'L'}]; // vodorovně
+    case 1:  return [{r,     c:c+1, color:ca, partner:'U'}, {r:r-1, c:c+1, color:cb, partner:'D'}]; // svisle, pravý sloupec
+    case 2:  return [{r,     c:c+1, color:ca, partner:'L'}, {r,     c,     color:cb, partner:'R'}]; // vodorovně
+    default: return [{r,     c,     color:ca, partner:'U'}, {r:r-1, c,     color:cb, partner:'D'}]; // svisle, levý sloupec
+  }
 }
 function canPlace(g, pill){
   for(const cl of cellsOf(pill)){
@@ -342,8 +346,9 @@ function move(p,d){ if(!p.pill) return; const np={...p.pill,c:p.pill.c+d}; if(ca
 function rotate(p){
   if(!p.pill) return;
   const no=(p.pill.orient+1)%4;
-  for(const k of [{},{c:p.pill.c-1},{c:p.pill.c+1},{r:p.pill.r-1}]){
-    const np={...p.pill,orient:no,...k};
+  // zkus na místě, pak drobné „kicky" (od stěny / od stropu / od podlahy)
+  for(const [dr,dc] of [[0,0],[0,-1],[0,1],[1,0],[1,-1],[1,1],[-1,0]]){
+    const np={...p.pill,orient:no,r:p.pill.r+dr,c:p.pill.c+dc};
     if(canPlace(p.grid,np)){ p.pill=np; return; }
   }
 }
