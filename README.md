@@ -60,16 +60,15 @@ zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 Každá dohraná hra se automaticky ukládá do prohlížeče (localStorage) — kdy začala, jak
 dlouho trvala, obtížnost (počet starostí), režim (dva hráči / vs počítač) a kdo vyhrál.
 
-Statistiky si zobrazíš tlačítkem **📊 STATISTIKY** pod televizí, nebo přímo přes URL:
-
-```
-index.html?stats
-```
+Statistiky si zobrazíš tlačítkem **📊 STATISTIKY** pod televizí, nebo otevřením
+samostatné stránky [`stats.html`](stats.html).
 
 Hry jsou seskupené **po dnech** — šipkami *Novější / Starší* listuješ mezi jednotlivými
 dny. U každého dne je souhrn (počet her, kolikrát vyhrál ženich/nevěsta) a tabulka her.
 
-> Pozn.: data se ukládají lokálně v daném prohlížeči a počítači; nikam se neodesílají.
+> Pozn.: data se ukládají lokálně přes `localStorage` v daném prohlížeči a počítači;
+> nikam se neodesílají. (localStorage zvolen místo IndexedDB, protože spolehlivě funguje
+> i při otevření přes `file://` a sdílí se mezi `index.html` a `stats.html`.)
 
 ## Téma
 

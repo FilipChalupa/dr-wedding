@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Wedding — Statistiky</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    min-height:100%;
+    background:radial-gradient(circle at 50% 35%, #15151f 0%, #08080c 60%, #000 100%);
+    font-family:'Courier New',monospace; color:#cdc8dd;
+    -webkit-text-size-adjust:100%;
+  }
+  .stats { width:min(96vw,860px); margin:0 auto; padding:4vh 2vh 6vh; }
+  h1 { color:#f8d77e; font-size:clamp(20px,3.4vh,34px); letter-spacing:.25vh;
+    text-align:center; font-style:italic; text-shadow:0 2px 0 #000; }
+  h1 small { display:block; font-style:normal; font-size:clamp(10px,1.5vh,14px); letter-spacing:.4vh;
+    color:#cba6ec; margin-top:.6vh; }
+  .nav { display:flex; align-items:center; justify-content:center; gap:1.6vh; margin:3vh 0 1vh; flex-wrap:wrap; }
+  button { font-family:inherit; font-size:clamp(12px,1.7vh,16px); font-weight:bold;
+    padding:.8vh 1.6vh; border-radius:1vh; cursor:pointer; color:#1a120a;
+    border:2px solid #1a120a; background:linear-gradient(#f0d79a,#c9a85e); box-shadow:0 2px 0 #1a120a; }
+  button:active { transform:translateY(2px); box-shadow:none; }
+  button:disabled { opacity:.3; cursor:default; box-shadow:0 2px 0 #1a120a; transform:none; }
+  .day { color:#cba6ec; font-size:clamp(13px,2vh,20px); text-align:center; font-weight:bold; min-width:38vw; }
+  .pageno { text-align:center; color:#6f6a8a; font-size:clamp(10px,1.4vh,13px); margin-bottom:2.4vh; }
+  .sum { text-align:center; color:#9a95ad; font-size:clamp(12px,1.6vh,15px); margin-bottom:2.6vh; line-height:1.7; }
+  .sum b { color:#e7e0ff; }
+  table { width:100%; border-collapse:collapse; font-size:clamp(12px,1.7vh,16px); }
+  th, td { padding:1vh .8vh; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; }
+  th { color:#f8a8c4; text-transform:uppercase; font-size:clamp(10px,1.3vh,12px); letter-spacing:.1vh; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .win-L { color:#cba6ec; font-weight:bold; }
+  .win-R { color:#f8a8c4; font-weight:bold; }
+  .empty { text-align:center; color:#9a95ad; margin:8vh 0; font-size:clamp(14px,1.9vh,18px); line-height:1.8; }
+  .back { display:block; text-align:center; margin-top:3.5vh; }
+  .back a { color:#7fd0ff; text-decoration:none; font-size:clamp(13px,1.7vh,16px); }
+  .back a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+  <div class="stats" id="stats"></div>
+
+<script>
+// Statistiky se ukládají v index.html do localStorage pod tímto klíčem.
+// (localStorage se na file:// sdílí napříč stránkami, takže to sem dosáhne.)
+const STORE_KEY='drwedding-games';
+function loadGames(){
+  try{ const v=JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); return Array.isArray(v)?v:[]; }
+  catch(e){ console.warn('Statistiky se nepodařilo načíst:',e); return []; }
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtDur(ms){ const s=Math.round(ms/1000), m=(s/60)|0; return m>0 ? m+' m '+(s%60)+' s' : s+' s'; }
+function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function dayKey(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDayLabel(k){
+  const [y,m,d]=k.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+function plural(n,one,few,many){ return n===1?one : (n>=2&&n<=4)?few : many; }
+
+function render(){
+  const el=document.getElementById('stats');
+  const backLink='<div class="back"><a href="index.html">← Zpět do hry</a></div>';
+
+  const games=loadGames();
+  games.sort((a,b)=> b.startedAt-a.startedAt);   // nejnovější první
+
+  if(games.length===0){
+    el.innerHTML='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'
+      +'<p class="empty">Zatím žádné dohrané hry.<br>Zahraj si a vrať se sem. 💍</p>'+backLink;
+    return;
+  }
+
+  // seskupení po dnech (sestupně, protože hry jsou seřazené sestupně)
+  const order=[]; const groups=new Map();
+  for(const g of games){ const k=dayKey(g.startedAt); if(!groups.has(k)){ groups.set(k,[]); order.push(k); } groups.get(k).push(g); }
+
+  let page=0;   // 0 = nejnovější den
+  function draw(){
+    const key=order[page], rows=groups.get(key);
+    let wL=0,wR=0,ai=0,total=0;
+    for(const g of rows){ if(g.winner==='L') wL++; else wR++; if(g.vsAI) ai++; total+=g.durationMs; }
+
+    const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'
+      +'<div class="nav">'
+      +'<button id="sNewer"'+(page<=0?' disabled':'')+'>‹ Novější</button>'
+      +'<span class="day">'+esc(fmtDayLabel(key))+'</span>'
+      +'<button id="sOlder"'+(page>=order.length-1?' disabled':'')+'>Starší ›</button>'
+      +'</div>'
+      +'<div class="pageno">den '+(page+1)+' / '+order.length+'</div>'
+      +'<div class="sum">'+rows.length+' '+plural(rows.length,'hra','hry','her')
+      +' · ženich <b>'+wL+'×</b> · nevěsta <b>'+wR+'×</b>'
+      +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
+
+    let table='<table><thead><tr>'
+      +'<th>Začátek</th><th>Trvání</th><th>Starosti</th><th>Režim</th><th>Vítěz</th>'
+      +'</tr></thead><tbody>';
+    for(const g of rows){
+      const win = g.winner==='L'
+        ? '<span class="win-L">Ženich</span>' : '<span class="win-R">Nevěsta</span>';
+      table+='<tr>'
+        +'<td>'+fmtTime(g.startedAt)+'</td>'
+        +'<td>'+fmtDur(g.durationMs)+'</td>'
+        +'<td class="num">'+g.viruses+' (úroveň '+g.level+')</td>'
+        +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
+        +'<td>'+win+'</td>'
+        +'</tr>';
+    }
+    table+='</tbody></table>';
+
+    el.innerHTML=head+table+backLink;
+    const older=document.getElementById('sOlder'), newer=document.getElementById('sNewer');
+    if(older) older.onclick=()=>{ if(page<order.length-1){ page++; draw(); window.scrollTo(0,0); } };
+    if(newer) newer.onclick=()=>{ if(page>0){ page--; draw(); window.scrollTo(0,0); } };
+  }
+  draw();
+}
+render();
+</script>
+</body>
+</html>
