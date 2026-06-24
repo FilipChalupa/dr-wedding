@@ -55,6 +55,22 @@ zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 > Tip: ovládat menu i start jde čistě z klávesnice (`1`/`2`, `Enter`), takže v `?tv` režimu
 > nejsou tlačítka potřeba. Na dotykovém displeji lze menu odbavit i klepnutím na obraz.
 
+## Statistiky
+
+Každá dohraná hra se automaticky ukládá do prohlížeče (localStorage) — kdy začala, jak
+dlouho trvala, obtížnost (počet starostí), režim (dva hráči / vs počítač) a kdo vyhrál.
+
+Statistiky si zobrazíš tlačítkem **📊 STATISTIKY** pod televizí, nebo přímo přes URL:
+
+```
+index.html?stats
+```
+
+Hry jsou seskupené **po dnech** — šipkami *Novější / Starší* listuješ mezi jednotlivými
+dny. U každého dne je souhrn (počet her, kolikrát vyhrál ženich/nevěsta) a tabulka her.
+
+> Pozn.: data se ukládají lokálně v daném prohlížeči a počítači; nikam se neodesílají.
+
 ## Téma
 
 - **Ženich** (vlevo) — šedý oblek, fialový motýlek, krátké tmavě blond vlasy, stojí u své sklenice.

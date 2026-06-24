@@ -126,6 +126,36 @@
     border-radius:0;
     box-shadow:inset 0 0 9vh rgba(0,0,0,.95), inset 0 0 1.5vh rgba(0,0,0,1);
   }
+
+  /* ---- stránka statistik (?stats) ---- */
+  body.statspage { overflow:auto; height:auto; align-items:flex-start; }
+  body.statspage .tv, body.statspage .controls { display:none; }
+  .stats { display:none; width:min(96vw,860px); margin:0 auto; padding:4vh 2vh 6vh; }
+  body.statspage .stats { display:block; }
+  .stats h1 { color:#f8d77e; font-size:clamp(20px,3.4vh,34px); letter-spacing:.25vh;
+    text-align:center; font-style:italic; text-shadow:0 2px 0 #000; }
+  .stats h1 small { display:block; font-style:normal; font-size:1.5vh; letter-spacing:.4vh;
+    color:#cba6ec; margin-top:.6vh; }
+  .stats .nav { display:flex; align-items:center; justify-content:center; gap:1.6vh; margin:3vh 0 1vh; }
+  .stats button { font-family:inherit; font-size:1.7vh; font-weight:bold;
+    padding:.8vh 1.6vh; border-radius:1vh; cursor:pointer; color:#1a120a;
+    border:2px solid #1a120a; background:linear-gradient(#f0d79a,#c9a85e); box-shadow:0 2px 0 #1a120a; }
+  .stats button:active { transform:translateY(2px); box-shadow:none; }
+  .stats button:disabled { opacity:.3; cursor:default; box-shadow:0 2px 0 #1a120a; transform:none; }
+  .stats .day { color:#cba6ec; font-size:2vh; text-align:center; font-weight:bold; min-width:30vw; }
+  .stats .pageno { text-align:center; color:#6f6a8a; font-size:1.4vh; margin-bottom:2.4vh; }
+  .stats .sum { text-align:center; color:#9a95ad; font-size:1.6vh; margin-bottom:2.6vh; line-height:1.7; }
+  .stats .sum b { color:#e7e0ff; }
+  .stats table { width:100%; border-collapse:collapse; font-size:1.7vh; }
+  .stats th, .stats td { padding:1vh .8vh; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; }
+  .stats th { color:#f8a8c4; text-transform:uppercase; font-size:1.3vh; letter-spacing:.1vh; }
+  .stats td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .stats .win-L { color:#cba6ec; font-weight:bold; }
+  .stats .win-R { color:#f8a8c4; font-weight:bold; }
+  .stats .empty { text-align:center; color:#9a95ad; margin:8vh 0; font-size:1.9vh; }
+  .stats .back { display:block; text-align:center; margin-top:3.5vh; }
+  .stats .back a { color:#7fd0ff; text-decoration:none; font-size:1.7vh; }
+  .stats .back a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -142,12 +172,17 @@
   <div class="controls">
     <button id="btnStart">▶ START</button>
     <button id="btnFull">⛶ FULLSCREEN</button>
+    <button id="btnStats">📊 STATISTIKY</button>
   </div>
+
+  <div class="stats" id="stats"></div>
 
 <script>
 //================= SETUP =================
 // ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
 if(new URLSearchParams(location.search).has('tv')) document.body.classList.add('tvmode');
+// ?stats -> stránka se statistikami (DOM, ne herní plátno)
+const STATS_MODE = new URLSearchParams(location.search).has('stats');
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -182,6 +217,8 @@ let frameCount = 0;
 let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
 let gameStart = 0;                      // čas (ms) začátku hraní (po odpočtu)
+let gameStartWall = 0;                  // reálný čas (Date.now) začátku hry — pro statistiky
+let gameLogged = false;                 // zda už byla dohraná hra zapsána do statistik
 let paused = false;
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
@@ -191,7 +228,8 @@ const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pa
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
-const DROP_START = 95, DROP_MIN = 22, DROP_RAMP = 0.8;
+// DROP_GRACE = úvodní vteřiny bez zrychlování (aby hra nezrychlila moc brzy)
+const DROP_START = 95, DROP_MIN = 22, DROP_RAMP = 0.5, DROP_GRACE = 25;
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
@@ -443,6 +481,23 @@ function endGame(p,res){
   freezeEnd=performance.now()+FREEZE_MS;
   winner = (res==='win') ? p : other(p);
   winner.celebrate=0;
+  logGame();
+}
+function logGame(){
+  if(gameLogged || !winner) return;
+  gameLogged=true;
+  const durationMs = Math.max(0, Math.round(performance.now()-gameStart));
+  saveGame({
+    startedAt: gameStartWall,
+    endedAt: Date.now(),
+    durationMs,
+    level,                              // 1..5
+    viruses: VIRUS_LEVELS[level-1],     // počet starostí
+    vsAI: !!players[1].ai,
+    winner: winner.side,                // 'L' = ženich, 'R' = nevěsta
+    scoreL: players[0].score,
+    scoreR: players[1].score,
+  });
 }
 
 //================= AI =================
@@ -498,10 +553,12 @@ function startGame(ai){
   ending=false;
   countdownEnd=performance.now()+COUNTDOWN_MS;
   gameStart=countdownEnd;
+  gameStartWall=Date.now()+COUNTDOWN_MS;   // reálný čas, kdy hra po odpočtu začne
+  gameLogged=false;
   mode='play';
 }
 function dropIntervalNow(){
-  const sec = Math.max(0, (performance.now()-gameStart)/1000);
+  const sec = Math.max(0, (performance.now()-gameStart)/1000 - DROP_GRACE);
   return Math.max(DROP_MIN, DROP_START - sec*DROP_RAMP);
 }
 function updatePlayer(p){
@@ -825,7 +882,7 @@ function frame(){
   else drawOver();
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+if(!STATS_MODE) requestAnimationFrame(frame);
 
 //================= INPUT =================
 // DAS pohyb do stran z herní smyčky (1× hned, krátká prodleva, pak rychlé opakování)
@@ -944,6 +1001,98 @@ document.getElementById('btnFull').addEventListener('click', toggleFull);
 document.getElementById('btnStart').addEventListener('click', ()=>{
   if(mode==='menu') startGame(pendingAI); else mode='menu';
 });
+document.getElementById('btnStats').addEventListener('click', ()=>{
+  const u=new URL(location.href); u.searchParams.set('stats',''); location.href=u.href;
+});
+
+//================= STATISTIKY (localStorage) =================
+// localStorage funguje spolehlivě i přes file:// (na rozdíl od IndexedDB).
+// Záznamy jsou drobné, takže limit ~5 MB stačí na desítky tisíc her.
+const STORE_KEY='drwedding-games';
+function loadGames(){
+  try{ const v=JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); return Array.isArray(v)?v:[]; }
+  catch(e){ console.warn('Statistiky se nepodařilo načíst:',e); return []; }
+}
+function saveGame(rec){
+  try{
+    const all=loadGames();
+    all.push(rec);
+    localStorage.setItem(STORE_KEY, JSON.stringify(all));
+  }catch(e){ console.warn('Statistiku se nepodařilo uložit:',e); }
+}
+
+//================= STRÁNKA STATISTIK =================
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtDur(ms){ const s=Math.round(ms/1000), m=(s/60)|0; return m>0 ? m+' m '+(s%60)+' s' : s+' s'; }
+function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function dayKey(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDayLabel(k){
+  const [y,m,d]=k.split('-').map(Number);
+  const date=new Date(y,m-1,d);
+  return date.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+function renderStatsPage(){
+  document.body.classList.add('statspage');
+  const el=document.getElementById('stats');
+  const backLink='<div class="back"><a href="'+esc(location.pathname)+'">← Zpět do hry</a></div>';
+
+  const games=loadGames();
+  games.sort((a,b)=> b.startedAt-a.startedAt);   // nejnovější první
+
+  if(games.length===0){
+    el.innerHTML='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'
+      +'<p class="empty">Zatím žádné dohrané hry.<br>Zahraj si a vrať se sem. 💍</p>'+backLink;
+    return;
+  }
+
+  // seskupení po dnech (sestupně, protože hry jsou seřazené sestupně)
+  const order=[]; const groups=new Map();
+  for(const g of games){ const k=dayKey(g.startedAt); if(!groups.has(k)){ groups.set(k,[]); order.push(k); } groups.get(k).push(g); }
+
+  let page=0;   // 0 = nejnovější den
+  function render(){
+    const key=order[page], rows=groups.get(key);
+    let wL=0,wR=0,ai=0,total=0;
+    for(const g of rows){ if(g.winner==='L') wL++; else wR++; if(g.vsAI) ai++; total+=g.durationMs; }
+
+    const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'
+      +'<div class="nav">'
+      +'<button id="sNewer"'+(page<=0?' disabled':'')+'>‹ Novější</button>'
+      +'<span class="day">'+esc(fmtDayLabel(key))+'</span>'
+      +'<button id="sOlder"'+(page>=order.length-1?' disabled':'')+'>Starší ›</button>'
+      +'</div>'
+      +'<div class="pageno">den '+(page+1)+' / '+order.length+'</div>'
+      +'<div class="sum">'+rows.length+' '+plural(rows.length,'hra','hry','her')
+      +' · ženich <b>'+wL+'×</b> · nevěsta <b>'+wR+'×</b>'
+      +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
+
+    let table='<table><thead><tr>'
+      +'<th>Začátek</th><th>Trvání</th><th>Starosti</th><th>Režim</th><th>Vítěz</th>'
+      +'</tr></thead><tbody>';
+    for(const g of rows){
+      const win = g.winner==='L'
+        ? '<span class="win-L">Ženich</span>' : '<span class="win-R">Nevěsta</span>';
+      table+='<tr>'
+        +'<td>'+fmtTime(g.startedAt)+'</td>'
+        +'<td>'+fmtDur(g.durationMs)+'</td>'
+        +'<td class="num">'+g.viruses+' (úroveň '+g.level+')</td>'
+        +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
+        +'<td>'+win+'</td>'
+        +'</tr>';
+    }
+    table+='</tbody></table>';
+
+    el.innerHTML=head+table+backLink;
+    const older=document.getElementById('sOlder'), newer=document.getElementById('sNewer');
+    if(older) older.onclick=()=>{ if(page<order.length-1){ page++; render(); window.scrollTo(0,0); } };
+    if(newer) newer.onclick=()=>{ if(page>0){ page--; render(); window.scrollTo(0,0); } };
+  }
+  render();
+}
+function plural(n,one,few,many){ return n===1?one : (n>=2&&n<=4)?few : many; }
+
+if(STATS_MODE) renderStatsPage();
 </script>
 </body>
 </html>
