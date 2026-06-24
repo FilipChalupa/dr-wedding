@@ -33,6 +33,7 @@
   th { color:#f8a8c4; text-transform:uppercase; font-size:clamp(10px,1.3vh,12px); letter-spacing:.1vh; }
   .win-L { color:#cba6ec; font-weight:bold; }
   .win-R { color:#f8a8c4; font-weight:bold; }
+  .dur { text-align:right; white-space:nowrap; }
   /* skóre: dvojtečky pod sebou — levé číslo doprava, pravé doleva, pevná šířka */
   .score { white-space:nowrap; }
   .score .sL { display:inline-block; min-width:4ch; text-align:right; }
@@ -68,7 +69,7 @@ function loadGames(){
 }
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function fmtDur(ms){ const s=Math.round(ms/1000), m=(s/60)|0; return m>0 ? m+' m '+(s%60)+' s' : s+' s'; }
+function fmtDur(ms){ const s=Math.round(ms/1000), m=(s/60)|0, ss=String(s%60).padStart(2,'0'); return m>0 ? m+' m '+ss+' s' : ss+' s'; }
 function fmtTime(ts){ const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function dayKey(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtDayLabel(k){
@@ -128,7 +129,7 @@ function render(){
       +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
 
     let table='<table><thead><tr>'
-      +'<th>Začátek</th><th>Trvání</th><th>Starosti</th><th>Režim</th>'
+      +'<th>Začátek</th><th class="dur">Trvání</th><th>Starosti</th><th>Režim</th>'
       +'<th title="ženich : nevěsta">Skóre Ž:N</th><th>Vítěz</th>'
       +'</tr></thead><tbody>';
     for(const g of rows){
@@ -137,7 +138,7 @@ function render(){
       const sL=g.scoreL==null?'–':g.scoreL, sR=g.scoreR==null?'–':g.scoreR;
       table+='<tr>'
         +'<td>'+fmtTime(g.startedAt)+'</td>'
-        +'<td>'+fmtDur(g.durationMs)+'</td>'
+        +'<td class="dur">'+fmtDur(g.durationMs)+'</td>'
         +'<td>'+g.viruses+' (úroveň '+g.level+')</td>'
         +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
         +'<td class="score"><span class="sL win-L">'+sL+'</span> : <span class="sR win-R">'+sR+'</span></td>'
