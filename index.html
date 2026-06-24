@@ -629,7 +629,14 @@ function aiThink(p){
 function startGame(ai){
   const nv = VIRUS_LEVELS[level-1];
   players=[newPlayer('L'), newPlayer('R')];
-  for(const p of players){ spawnViruses(p.grid,nv); p.virusCount=countViruses(p.grid); }
+  // Stejná obtížnost → stejné výchozí rozložení starostí pro oba hráče:
+  // vygeneruj jedno a zkopíruj do obou mřížek (kopie buněk, ne sdílené reference).
+  const template = new Array(COLS*ROWS).fill(null);
+  spawnViruses(template, nv);
+  for(const p of players){
+    for(let i=0;i<template.length;i++) p.grid[i] = template[i] ? {...template[i]} : null;
+    p.virusCount=countViruses(p.grid);
+  }
   players[1].ai = ai;
   winner=null;
   paused=false;
