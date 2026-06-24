@@ -264,7 +264,8 @@ function musicScheduler(){
 function togglePause(){
   if(mode!=='play' || ending) return;
   paused=!paused;
-  if(paused) musicStop(); else musicStart();
+  if(paused){ pausePrev=performance.now(); musicStop(); }
+  else musicStart();
 }
 
 //================= GAME STATE =================
@@ -279,6 +280,7 @@ let gameStart = 0;                      // čas (ms) začátku hraní (po odpoč
 let gameStartWall = 0;                  // reálný čas (Date.now) začátku hry — pro statistiky
 let gameLogged = false;                 // zda už byla dohraná hra zapsána do statistik
 let lastCdNum = 0;                       // poslední číslo odpočtu (pro pípnutí 3·2·1)
+let pausePrev = 0;                       // čas (ms) poslední pauza-snímku (pro zmrazení času)
 let paused = false;
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
@@ -645,6 +647,7 @@ function updatePlayer(p){
     const np=p.next; p.next=randPill();
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
+    p.softDrop=false;            // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
     if(!canPlace(p.grid,p.pill)){ p.pill=null; endGame(p,'lose'); return; }
     p.dropTimer=0;
     return;
@@ -659,6 +662,14 @@ function updatePlayer(p){
 }
 function update(){
   if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; } return; }
+  if(paused){
+    // pauza zmrazí čas: posuň časové kotvy, aby „zbývající" odpočet i náběh rychlosti stály
+    const t=performance.now(), dt=t-pausePrev; pausePrev=t;
+    const inCountdown = t < countdownEnd;
+    countdownEnd+=dt; gameStart+=dt;
+    if(inCountdown) gameStartWall+=dt;   // reálný start hry se posouvá jen když pauza padne do odpočtu
+    return;
+  }
   const cdRem = countdownEnd - performance.now();
   if(cdRem > 0){
     const elapsed = COUNTDOWN_MS - cdRem;
@@ -667,7 +678,6 @@ function update(){
     return;
   }
   if(lastCdNum>0){ lastCdNum=0; Snd.count(true); }            // start! vyšší pípnutí
-  if(paused) return;
   for(const p of players) updatePlayer(p);
   for(const p of players){
     if(p.comboTimer>0) p.comboTimer--;
@@ -1012,9 +1022,9 @@ window.addEventListener('keydown', e=>{
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
   switch(e.code){              // pohyb do stran řeší pollKeyboard (DAS)
     case 'KeyW': if(!e.repeat) rotate(p1); break;
-    case 'KeyS': p1.softDrop=true; break;
+    case 'KeyS': if(!e.repeat) p1.softDrop=true; break;
     case 'ArrowUp':    if(!e.repeat) rotate(pa); e.preventDefault(); break;
-    case 'ArrowDown':  pa.softDrop=true; e.preventDefault(); break;
+    case 'ArrowDown':  if(!e.repeat) pa.softDrop=true; e.preventDefault(); break;
     case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
   }
 });
@@ -1061,7 +1071,10 @@ function pollGamepads(){
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
         if(hit('rotate')) rotate(p);
-        p.softDrop = cur.down;
+        // soft drop platí jen pro aktuální blok: zapni na stisk, vypni na puštění
+        // (po spawnu se softDrop vynuluje a držený směr ho sám neobnoví — nutný nový stisk)
+        if(hit('down')) p.softDrop=true;
+        else if(!cur.down) p.softDrop=false;
         const dir = cur.left ? -1 : cur.right ? 1 : 0;
         const rep = padRepeat[i] || {dir:0,timer:0};
         if(dir!==0){
