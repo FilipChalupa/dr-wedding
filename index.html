@@ -189,12 +189,12 @@ function audioInit(){
 function toggleMute(){
   muted=!muted;
   try{ localStorage.setItem('drwedding-muted', muted?'1':'0'); }catch(e){}
-  if(!muted){ audioInit(); tone(660,0.08,{vol:0.12}); }   // krátké cvaknutí na potvrzení
+  if(muted){ musicStop(); }
+  else { audioInit(); tone(660,0.08,{vol:0.12}); musicStart(); }   // cvaknutí + případně obnov hudbu
 }
-// jeden tón s obálkou; volitelný skluz frekvence (slideTo)
-function tone(freq, dur, {type='square', vol=0.14, attack=0.005, when=0, slideTo=null}={}){
+// jeden tón s obálkou na zadaný absolutní čas; volitelný skluz frekvence (slideTo)
+function toneAt(freq, t0, dur, {type='square', vol=0.14, attack=0.005, slideTo=null}={}){
   if(muted || !actx) return;
-  const t0=actx.currentTime+when;
   const o=actx.createOscillator(), g=actx.createGain();
   o.type=type; o.frequency.setValueAtTime(freq,t0);
   if(slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1,slideTo), t0+dur);
@@ -204,6 +204,7 @@ function tone(freq, dur, {type='square', vol=0.14, attack=0.005, when=0, slideTo
   o.connect(g).connect(actx.destination);
   o.start(t0); o.stop(t0+dur+0.03);
 }
+function tone(freq, dur, opts={}){ if(!actx) return; toneAt(freq, actx.currentTime+(opts.when||0), dur, opts); }
 const Snd = {
   move(){   tone(170,0.03,{type:'square',vol:0.04}); },
   rotate(){ tone(430,0.05,{type:'square',vol:0.07}); },
@@ -215,6 +216,56 @@ const Snd = {
   count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
   win(){    const m=[523,659,784,1047]; m.forEach((f,i)=>tone(f,0.18,{type:'square',vol:0.12,when:i*0.13})); },
 };
+
+//================= GENEROVANÁ HUDBA NA POZADÍ =================
+// Jednoduchý chiptune sekvencer s předstihovým plánováním (lookahead).
+// Veselá svatební progrese I–IV–vi–V (C–F–Am–G) v C dur, basa + arpeggio + melodie.
+function midiHz(m){ return 440*Math.pow(2,(m-69)/12); }
+const M_TEMPO = 116;                         // BPM (osminové kroky)
+const M_PROG = [                             // 4 takty po 8 krocích = 32 kroků smyčka
+  {bass:36, ch:[60,64,67]},                  // C dur
+  {bass:41, ch:[60,65,69]},                  // F dur
+  {bass:45, ch:[57,60,64]},                  // a moll
+  {bass:43, ch:[59,62,67]},                  // G dur
+];
+const M_LEAD = [                             // melodie (osminy, 0 = pauza)
+  72,0,71,72, 76,0,74,72,
+  77,0,76,74, 72,0,69, 0,
+  72,0,76,79, 77,0,76,74,
+  74,0,72,71, 67,0,72, 0,
+];
+const music = { on:false, step:0, nextTime:0, timer:null };
+function musicStart(){
+  if(music.on || muted || !actx || mode!=='play' || paused) return;
+  music.on=true; music.step=0; music.nextTime=actx.currentTime+0.12;
+  music.timer=setInterval(musicScheduler, 25);
+}
+function musicStop(){
+  music.on=false;
+  if(music.timer){ clearInterval(music.timer); music.timer=null; }
+}
+function musicStep(step, t){
+  const bar=(step>>3)&3, beat=step&7, chord=M_PROG[bar];
+  if(beat===0 || beat===4) toneAt(midiHz(chord.bass), t, 0.36, {type:'triangle', vol:0.15});   // basa
+  if((beat&1)===0){ const n=chord.ch[(beat>>1)%chord.ch.length]; toneAt(midiHz(n), t, 0.16, {type:'square', vol:0.045}); } // arpeggio
+  const lead=M_LEAD[step];
+  if(lead) toneAt(midiHz(lead), t, 0.20, {type:'square', vol:0.06});                            // melodie
+}
+function musicScheduler(){
+  if(!music.on) return;
+  if(!actx || mode!=='play' || paused){ musicStop(); return; }   // pojistka: stav se změnil
+  const spStep = 60/M_TEMPO/2;               // délka osminového kroku v sekundách
+  while(music.nextTime < actx.currentTime + 0.20){
+    musicStep(music.step, music.nextTime);
+    music.nextTime += spStep;
+    music.step = (music.step+1) % M_LEAD.length;
+  }
+}
+function togglePause(){
+  if(mode!=='play' || ending) return;
+  paused=!paused;
+  if(paused) musicStop(); else musicStart();
+}
 
 //================= GAME STATE =================
 let mode = 'menu';        // 'menu' | 'play' | 'over'
@@ -263,13 +314,18 @@ function other(p){ return players[0]===p ? players[1] : players[0]; }
 // pill.r = spodní řada, pill.c = levý sloupec. Spodek zůstává na místě:
 // vodorovná poloha je vždy v řadě r, svislá poloha roste nahoru (r, r-1).
 // Svislé orientace střídají pravý / levý sloupec (pohyb do boků).
+// Kostka má vždy ukotvenou buňku 4 = (r, c+1). Naležato zabírá 3-4 (řada r),
+// svisle 2-4 (sloupec c+1). Otáčení tedy jen mění mezi těmito dvěma polohami
+// a prohazuje barvy — nikdy neposouvá kostku doleva/doprava.
+//   1-2     3 = (r, c)     4 = (r, c+1)
+//   3-4     1 = (r-1, c)   2 = (r-1, c+1)
 function cellsOf(pill){
   const {r,c,orient,ca,cb}=pill;
   switch(orient){
-    case 0:  return [{r,     c,     color:ca, partner:'R'}, {r,     c:c+1, color:cb, partner:'L'}]; // vodorovně
-    case 1:  return [{r,     c:c+1, color:ca, partner:'U'}, {r:r-1, c:c+1, color:cb, partner:'D'}]; // svisle vpravo: ca dole
-    case 2:  return [{r,     c:c+1, color:ca, partner:'L'}, {r,     c,     color:cb, partner:'R'}]; // vodorovně (prohozené)
-    default: return [{r:r-1, c,     color:ca, partner:'D'}, {r,     c,     color:cb, partner:'U'}]; // svisle vlevo: ca nahoře
+    case 0:  return [{r,     c,     color:ca, partner:'R'}, {r,     c:c+1, color:cb, partner:'L'}]; // naležato 3-4: ca vlevo
+    case 1:  return [{r,     c:c+1, color:ca, partner:'U'}, {r:r-1, c:c+1, color:cb, partner:'D'}]; // svisle 2-4: ca dole
+    case 2:  return [{r,     c:c+1, color:ca, partner:'L'}, {r,     c,     color:cb, partner:'R'}]; // naležato 3-4 (prohozené): ca vpravo
+    default: return [{r:r-1, c:c+1, color:ca, partner:'D'}, {r,     c:c+1, color:cb, partner:'U'}]; // svisle 2-4 (prohozené): ca nahoře
   }
 }
 function canPlace(g, pill){
@@ -494,6 +550,7 @@ function endGame(p,res){
   freezeEnd=performance.now()+FREEZE_MS;
   winner = (res==='win') ? p : other(p);
   winner.celebrate=0;
+  musicStop();
   Snd.win();
   logGame();
 }
@@ -572,6 +629,7 @@ function startGame(ai){
   lastCdNum=0;
   audioInit();                             // start je gesto uživatele → rozběhni zvuk
   mode='play';
+  musicStop(); musicStart();               // hudba na pozadí (hraje i během odpočtu)
 }
 function dropIntervalNow(){
   const sec = Math.max(0, (performance.now()-gameStart)/1000 - DROP_GRACE);
@@ -948,7 +1006,7 @@ window.addEventListener('keydown', e=>{
   }
   // play
   if(ending) return;
-  if(e.code==='KeyP'){ paused=!paused; return; }
+  if(e.code==='KeyP'){ togglePause(); return; }
   if(paused) return;
   const p1=players[0], p2=players[1];
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
@@ -998,7 +1056,7 @@ function pollGamepads(){
     } else if(mode==='over'){
       if(hit('confirm')) mode='menu';
     } else if(mode==='play' && !ending){
-      if(hit('start')) paused=!paused;
+      if(hit('start')) togglePause();
       let p = players[i];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
@@ -1030,7 +1088,7 @@ function toggleFull(){
 document.getElementById('btnFull').addEventListener('click', ()=>{ audioInit(); toggleFull(); });
 document.getElementById('btnStart').addEventListener('click', ()=>{
   audioInit();
-  if(mode==='menu') startGame(pendingAI); else mode='menu';
+  if(mode==='menu') startGame(pendingAI); else { musicStop(); mode='menu'; }
 });
 document.getElementById('btnStats').addEventListener('click', ()=>{
   location.href='stats.html';

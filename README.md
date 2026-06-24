@@ -1,7 +1,8 @@
 # 💍 Dr. Wedding
 
 Retro svatební hra ve stylu **Dr. Mario** — multiplayer pro dva hráče, ženich proti nevěstě.
-Čistá webovka bez instalace, s retro pípáním (lze vypnout), stylizovaná do staré CRT televize 4:3.
+Čistá webovka bez instalace, s generovaným retro pípáním i hudbou na pozadí (lze vypnout),
+stylizovaná do staré CRT televize 4:3.
 
 ## Spuštění
 
@@ -31,7 +32,7 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Dolů      | `S`            | `↓`              |
 
 Pauza ve hře: `P` (klávesnice) nebo **Start** (ovladač).
-Zvuk zapnout/vypnout: `M` (volba se pamatuje).
+Zvuk i hudbu na pozadí zapnout/vypnout: `M` (volba se pamatuje).
 
 V menu: nahoru/dolů (`W`/`S`, šipky nebo ovladač) přepíná mezi *dva hráči* a *vs počítač*
 (na trénink sólo); doleva/doprava (`A`/`D`, šipky nebo ovladač) nastavuje **počet starostí**
