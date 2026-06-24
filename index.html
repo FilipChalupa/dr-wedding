@@ -304,12 +304,16 @@ function anniversaryYears(){                         // >0 = kolikáté výroč�
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
+// Sdílená sekvence kapslí — oba hráči dostávají kapsle ve stejném pořadí
+// (každý si drží svůj index podle toho, kolik už jich spotřeboval).
+let pillSeq = [];
+function pillAt(i){ while(pillSeq.length<=i) pillSeq.push(randPill()); return pillSeq[i]; }
 
 function newPlayer(side){
   return {
     side,                       // 'L' groom, 'R' bride
     grid:new Array(COLS*ROWS).fill(null),
-    pill:null, next:randPill(),
+    pill:null, next:null, pillIdx:0,
     dropTimer:0, softDrop:false,
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
@@ -637,6 +641,9 @@ function startGame(ai){
     for(let i=0;i<template.length;i++) p.grid[i] = template[i] ? {...template[i]} : null;
     p.virusCount=countViruses(p.grid);
   }
+  // stejné pořadí kapslí pro oba — sdílená sekvence od začátku
+  pillSeq=[];
+  for(const p of players){ p.pillIdx=0; p.next=pillAt(0); }
   players[1].ai = ai;
   winner=null;
   paused=false;
@@ -661,7 +668,7 @@ function updatePlayer(p){
     if(p.pendingGarbage.length>0){ dropGarbage(p); startResolve(p); return; }   // smetí spadne animovaně
     p.virusCount=countViruses(p.grid);
     if(p.virusCount===0){ endGame(p,'win'); return; }
-    const np=p.next; p.next=randPill();
+    const np=p.next; p.next=pillAt(++p.pillIdx);   // další kapsle ze sdílené sekvence
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
     p.softDrop=false;            // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
