@@ -473,9 +473,10 @@ function spawnViruses(g,n){
 
 //================= MOVES =================
 function move(p,d){ if(!p.pill) return; const np={...p.pill,c:p.pill.c+d}; if(canPlace(p.grid,np)){ p.pill=np; if(!p.ai) Snd.move(); } }
-function rotate(p){
+// dir = +1 po směru hodinových ručiček, -1 proti směru
+function rotate(p, dir=1){
   if(!p.pill) return;
-  const no=(p.pill.orient+1)%4;
+  const no=(p.pill.orient+dir+4)%4;
   // zkus na místě, pak drobné „kicky" (od stěny / od stropu / od podlahy)
   for(const [dr,dc] of [[0,0],[0,-1],[0,1],[1,0],[1,-1],[1,1],[-1,0]]){
     const np={...p.pill,orient:no,r:p.pill.r+dr,c:p.pill.c+dc};
@@ -1044,9 +1045,13 @@ function readPad(gp){
   const ax = gp.axes || [];
   const lx = ax[0]||0, ly = ax[1]||0;
   const up=b(12)||ly<-0.5, down=b(13)||ly>0.5, left=b(14)||lx<-0.5, right=b(15)||lx>0.5;
+  // Přední 4 tlačítka (diamant vpravo). Ve standard mappingu Gamepad API:
+  //   0 = A (dole), 1 = B (vpravo), 2 = X (vlevo), 3 = Y (nahoře).
+  // Úhlopříčné dvojice se točí stejně: A+Y po směru, B+X proti směru.
   return {
     up, down, left, right,
-    rotate:  b(0)||b(1)||b(2)||b(3)||up,   // jakékoli tlačítko nebo nahoru = otočit
+    rotCW:  b(0)||b(3)||up,                 // A + Y (a křížek nahoru) = po směru hod. ručiček
+    rotCCW: b(1)||b(2),                     // B + X = proti směru
     confirm: b(0)||b(9),                    // A nebo Start
     start:   b(9),                          // Start = pauza
   };
@@ -1070,7 +1075,8 @@ function pollGamepads(){
       let p = players[i];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
-        if(hit('rotate')) rotate(p);
+        if(hit('rotCW'))  rotate(p, 1);    // A / Y → po směru hodinových ručiček
+        if(hit('rotCCW')) rotate(p, -1);   // B / X → proti směru
         // soft drop platí jen pro aktuální blok: zapni na stisk, vypni na puštění
         // (po spawnu se softDrop vynuluje a držený směr ho sám neobnoví — nutný nový stisk)
         if(hit('down')) p.softDrop=true;

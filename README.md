@@ -34,6 +34,20 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 Pauza ve hře: `P` (klávesnice) nebo **Start** (ovladač).
 Zvuk i hudbu na pozadí zapnout/vypnout: `M` (volba se pamatuje).
 
+### USB ovladače
+
+Ovladač **0 → ženich**, ovladač **1 → nevěsta** (v sólo hře ovládá člověka libovolný
+ovladač). Pohyb je přes **D-pad** nebo **levou páčku**. Přední 4 tlačítka (diamant vpravo)
+otáčejí blokem na obě strany — úhlopříčné dvojice se točí stejně:
+
+| Tlačítko (standard) | Otočení |
+|---------------------|---------|
+| **A** (dole) + **Y** (nahoře) | po směru hodinových ručiček |
+| **B** (vpravo) + **X** (vlevo) | proti směru |
+
+Křížek **nahoru** otáčí po směru, **Start** pauzuje. (Fyzické rozložení se může u různých
+ovladačů lišit — pokud by dvojice seděly opačně, dají se v `readPad` prohodit indexy tlačítek.)
+
 V menu: nahoru/dolů (`W`/`S`, šipky nebo ovladač) přepíná mezi *dva hráči* a *vs počítač*
 (na trénink sólo); doleva/doprava (`A`/`D`, šipky nebo ovladač) nastavuje **počet starostí**
 (5 úrovní obtížnosti) · `Enter` (nebo A/Start na ovladači) = start · `F` = fullscreen.
