@@ -27,11 +27,16 @@
   .pageno { text-align:center; color:#6f6a8a; font-size:clamp(10px,1.4vh,13px); margin-bottom:2.4vh; }
   .sum { text-align:center; color:#9a95ad; font-size:clamp(12px,1.6vh,15px); margin-bottom:2.6vh; line-height:1.7; }
   .sum b { color:#e7e0ff; }
-  table { width:100%; border-collapse:collapse; font-size:clamp(12px,1.7vh,16px); }
+  table { width:100%; border-collapse:collapse; font-size:clamp(12px,1.7vh,16px);
+    font-variant-numeric:tabular-nums; }
   th, td { padding:1vh .8vh; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; }
   th { color:#f8a8c4; text-transform:uppercase; font-size:clamp(10px,1.3vh,12px); letter-spacing:.1vh; }
   .win-L { color:#cba6ec; font-weight:bold; }
   .win-R { color:#f8a8c4; font-weight:bold; }
+  /* skóre: dvojtečky pod sebou — levé číslo doprava, pravé doleva, pevná šířka */
+  .score { white-space:nowrap; }
+  .score .sL { display:inline-block; min-width:4ch; text-align:right; }
+  .score .sR { display:inline-block; min-width:4ch; text-align:left; }
   .empty { text-align:center; color:#9a95ad; margin:8vh 0; font-size:clamp(14px,1.9vh,18px); line-height:1.8; }
   .back { display:block; text-align:center; margin-top:3.5vh; }
   .back a { color:#7fd0ff; text-decoration:none; font-size:clamp(13px,1.7vh,16px); }
@@ -135,7 +140,7 @@ function render(){
         +'<td>'+fmtDur(g.durationMs)+'</td>'
         +'<td>'+g.viruses+' (úroveň '+g.level+')</td>'
         +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
-        +'<td><span class="win-L">'+sL+'</span> : <span class="win-R">'+sR+'</span></td>'
+        +'<td class="score"><span class="sL win-L">'+sL+'</span> : <span class="sR win-R">'+sR+'</span></td>'
         +'<td>'+win+'</td>'
         +'</tr>';
     }
