@@ -88,6 +88,19 @@ listuješ mezi dny; u každého dne je denní souhrn a tabulka her se skóre. Do
 > nikam se neodesílají. (localStorage zvolen místo IndexedDB, protože spolehlivě funguje
 > i při otevření přes `file://` a sdílí se mezi `index.html` a `stats.html`.)
 
+## Offline provoz
+
+Hra funguje offline. Při otevření přímo ze souboru (`file://`, dvojklik) žádný server
+nepotřebuje, takže běží offline rovnou. Když je **hostovaná přes http(s)** (server / GitHub
+Pages), stará se o offline `sw.js` (service worker) se strategií **network first, cache jako
+fallback**: když je síť dostupná, načte čerstvou verzi a uloží ji do cache; když síť/server
+vypadne, obslouží poslední uloženou verzi z cache.
+
+> Service worker funguje jen přes http(s) nebo `localhost` (ne přes `file://`). Vyzkoušet se
+> dá lokálně: `python3 -m http.server` ve složce hry, otevřít `http://localhost:8000/`,
+> načíst jednou online a pak v DevTools zapnout *Offline* (nebo vypnout server) — hra se
+> načte dál. Po nasazení nové verze se cache sama aktualizuje při prvním online načtení.
+
 ## Velikonoční vajíčka
 
 - **Výročí svatby** — od prvního výročí (rok po svatbě) se v den výročí v menu spustí

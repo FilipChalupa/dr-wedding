@@ -1177,6 +1177,12 @@ function saveGame(rec){
   }catch(e){ console.warn('Statistiku se nepodařilo uložit:',e); }
 }
 // Zobrazení statistik je v samostatné stránce stats.html (čte stejný localStorage).
+
+//================= OFFLINE (service worker) =================
+// Registrace SW pro offline provoz (network first, cache fallback). Funguje jen přes http(s).
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>

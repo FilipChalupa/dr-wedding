@@ -162,6 +162,11 @@ function render(){
   draw();
 }
 render();
+
+// offline provoz (network first, cache fallback) — funguje jen přes http(s)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>
