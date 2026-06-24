@@ -1,7 +1,7 @@
 # 💍 Dr. Wedding
 
 Retro svatební hra ve stylu **Dr. Mario** — multiplayer pro dva hráče, ženich proti nevěstě.
-Čistá webovka v jednom souboru, bez instalace a bez zvuků, stylizovaná do staré CRT televize 4:3.
+Čistá webovka bez instalace, s retro pípáním (lze vypnout), stylizovaná do staré CRT televize 4:3.
 
 ## Spuštění
 
@@ -31,6 +31,7 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Dolů      | `S`            | `↓`              |
 
 Pauza ve hře: `P` (klávesnice) nebo **Start** (ovladač).
+Zvuk zapnout/vypnout: `M` (volba se pamatuje).
 
 V menu: nahoru/dolů (`W`/`S`, šipky nebo ovladač) přepíná mezi *dva hráči* a *vs počítač*
 (na trénink sólo); doleva/doprava (`A`/`D`, šipky nebo ovladač) nastavuje **počet starostí**
@@ -63,8 +64,10 @@ dlouho trvala, obtížnost (počet starostí), režim (dva hráči / vs počíta
 Statistiky si zobrazíš tlačítkem **📊 STATISTIKY** pod televizí, nebo otevřením
 samostatné stránky [`stats.html`](stats.html).
 
-Hry jsou seskupené **po dnech** — šipkami *Novější / Starší* listuješ mezi jednotlivými
-dny. U každého dne je souhrn (počet her, kolikrát vyhrál ženich/nevěsta) a tabulka her.
+Nahoře je **celkový souhrn** napříč všemi dny (kolikrát vyhrál ženich/nevěsta, počet her,
+celkový a nejdelší čas). Níže jsou hry seskupené **po dnech** — šipkami *Novější / Starší*
+listuješ mezi dny; u každého dne je denní souhrn a tabulka her se skóre. Dole je tlačítko
+**🗑 Vymazat statistiky** (s potvrzením).
 
 > Pozn.: data se ukládají lokálně přes `localStorage` v daném prohlížeči a počítači;
 > nikam se neodesílají. (localStorage zvolen místo IndexedDB, protože spolehlivě funguje

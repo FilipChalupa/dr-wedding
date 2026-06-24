@@ -36,6 +36,18 @@
   .back { display:block; text-align:center; margin-top:3.5vh; }
   .back a { color:#7fd0ff; text-decoration:none; font-size:clamp(13px,1.7vh,16px); }
   .back a:hover { text-decoration:underline; }
+  /* celkový souhrn napříč všemi dny */
+  .overall { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+    border-radius:1.2vh; padding:2.4vh 2vh 2vh; margin:2.5vh 0 1vh; text-align:center; }
+  .overall .big { display:flex; justify-content:center; align-items:flex-end; gap:clamp(20px,5vw,56px);
+    flex-wrap:wrap; margin-bottom:1.6vh; }
+  .overall .v { font-size:clamp(22px,4vh,40px); font-weight:bold; display:block; line-height:1; }
+  .overall .v.total { color:#f8d77e; }
+  .overall .l { font-size:clamp(10px,1.3vh,12px); color:#9a95ad; text-transform:uppercase; letter-spacing:.1vh; }
+  .overall .meta { color:#9a95ad; font-size:clamp(12px,1.6vh,15px); line-height:1.7; }
+  .overall .meta b { color:#e7e0ff; }
+  .actions { text-align:center; margin-top:2.4vh; }
+  button.danger { background:linear-gradient(#e8a0a0,#c96e6e); }
 </style>
 </head>
 <body>
@@ -73,6 +85,22 @@ function render(){
     return;
   }
 
+  // celkový souhrn napříč všemi dny
+  let tWL=0,tWR=0,tAI=0,tTime=0,tLongest=0;
+  for(const g of games){
+    if(g.winner==='L') tWL++; else tWR++;
+    if(g.vsAI) tAI++;
+    tTime+=g.durationMs;
+    if(g.durationMs>tLongest) tLongest=g.durationMs;
+  }
+  const overall='<div class="overall"><div class="big">'
+    +'<div><span class="v win-L">'+tWL+'</span><span class="l">Ženich</span></div>'
+    +'<div><span class="v total">'+games.length+'</span><span class="l">'+plural(games.length,'hra','hry','her')+' celkem</span></div>'
+    +'<div><span class="v win-R">'+tWR+'</span><span class="l">Nevěsta</span></div>'
+    +'</div><div class="meta">celkem odehráno <b>'+fmtDur(tTime)+'</b>'
+    +' · nejdelší hra <b>'+fmtDur(tLongest)+'</b>'
+    +' · vs počítač <b>'+tAI+'×</b></div></div>';
+
   // seskupení po dnech (sestupně, protože hry jsou seřazené sestupně)
   const order=[]; const groups=new Map();
   for(const g of games){ const k=dayKey(g.startedAt); if(!groups.has(k)){ groups.set(k,[]); order.push(k); } groups.get(k).push(g); }
@@ -83,7 +111,7 @@ function render(){
     let wL=0,wR=0,ai=0,total=0;
     for(const g of rows){ if(g.winner==='L') wL++; else wR++; if(g.vsAI) ai++; total+=g.durationMs; }
 
-    const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'
+    const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'+overall
       +'<div class="nav">'
       +'<button id="sNewer"'+(page<=0?' disabled':'')+'>‹ Novější</button>'
       +'<span class="day">'+esc(fmtDayLabel(key))+'</span>'
@@ -95,25 +123,35 @@ function render(){
       +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
 
     let table='<table><thead><tr>'
-      +'<th>Začátek</th><th>Trvání</th><th>Starosti</th><th>Režim</th><th>Vítěz</th>'
+      +'<th>Začátek</th><th>Trvání</th><th>Starosti</th><th>Režim</th>'
+      +'<th title="ženich : nevěsta">Skóre Ž:N</th><th>Vítěz</th>'
       +'</tr></thead><tbody>';
     for(const g of rows){
       const win = g.winner==='L'
         ? '<span class="win-L">Ženich</span>' : '<span class="win-R">Nevěsta</span>';
+      const sL=g.scoreL==null?'–':g.scoreL, sR=g.scoreR==null?'–':g.scoreR;
       table+='<tr>'
         +'<td>'+fmtTime(g.startedAt)+'</td>'
         +'<td>'+fmtDur(g.durationMs)+'</td>'
         +'<td>'+g.viruses+' (úroveň '+g.level+')</td>'
         +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
+        +'<td><span class="win-L">'+sL+'</span> : <span class="win-R">'+sR+'</span></td>'
         +'<td>'+win+'</td>'
         +'</tr>';
     }
     table+='</tbody></table>';
 
-    el.innerHTML=head+table+backLink;
+    const actions='<div class="actions"><button id="sClear" class="danger">🗑 Vymazat statistiky</button></div>';
+    el.innerHTML=head+table+actions+backLink;
     const older=document.getElementById('sOlder'), newer=document.getElementById('sNewer');
     if(older) older.onclick=()=>{ if(page<order.length-1){ page++; draw(); window.scrollTo(0,0); } };
     if(newer) newer.onclick=()=>{ if(page>0){ page--; draw(); window.scrollTo(0,0); } };
+    document.getElementById('sClear').onclick=()=>{
+      if(confirm('Opravdu smazat všechny statistiky? Tuto akci nelze vrátit.')){
+        try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+        window.scrollTo(0,0); render();
+      }
+    };
   }
   draw();
 }
