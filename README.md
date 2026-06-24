@@ -88,6 +88,14 @@ listuješ mezi dny; u každého dne je denní souhrn a tabulka her se skóre. Do
 > nikam se neodesílají. (localStorage zvolen místo IndexedDB, protože spolehlivě funguje
 > i při otevření přes `file://` a sdílí se mezi `index.html` a `stats.html`.)
 
+## Velikonoční vajíčka
+
+- **Attract režim** — když se v menu ~20 s nesáhne na ovládání, páreček se začne houpat,
+  tančit a posílat si pusinky; jakýkoli vstup ho vrátí do normálu.
+- **Výročí svatby** — od prvního výročí (rok po svatbě) se v den výročí v menu spustí
+  ohňostroj a nápis „Šťastné X. výročí!". Datum se nastavuje v `index.html` konstantou
+  `WEDDING = { year, month, day }`.
+
 ## Téma
 
 - **Ženich** (vlevo) — šedý oblek, fialový motýlek, krátké tmavě blond vlasy, stojí u své sklenice.

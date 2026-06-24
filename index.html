@@ -281,6 +281,7 @@ let gameStartWall = 0;                  // reálný čas (Date.now) začátku hr
 let gameLogged = false;                 // zda už byla dohraná hra zapsána do statistik
 let lastCdNum = 0;                       // poslední číslo odpočtu (pro pípnutí 3·2·1)
 let pausePrev = 0;                       // čas (ms) poslední pauza-snímku (pro zmrazení času)
+let lastInput = 0;                       // čas (ms) posledního vstupu (pro attract režim v menu)
 let paused = false;
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
@@ -292,6 +293,16 @@ const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
 // DROP_GRACE = úvodní vteřiny bez zrychlování (aby hra nezrychlila moc brzy)
 const DROP_START = 95, DROP_MIN = 22, DROP_RAMP = 0.5, DROP_GRACE = 25;
+
+// --- Velikonoční vajíčka ---
+const IDLE_MS = 20000;                              // nečinnost v menu → attract režim (tančící páreček)
+const WEDDING = { year:2026, month:8, day:7 };      // svatba 7. srpna 2026 → výročí od 7. 8. 2027
+function anniversaryYears(){                         // >0 = kolikáté výročí dnes je (spustí se od dalšího roku)
+  const d=new Date();
+  if(d.getFullYear()>WEDDING.year && (d.getMonth()+1)===WEDDING.month && d.getDate()===WEDDING.day)
+    return d.getFullYear()-WEDDING.year;
+  return 0;
+}
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
 function randPill(){ return {ca:randColor(), cb:randColor()}; }
@@ -919,16 +930,51 @@ function drawPlay(hideSide){
   }
 }
 
+// výroční ohňostroj (lehké částicové výbuchy z primitiv)
+function drawFireworks(){
+  const px=[55,160,265,105,215], py=[58,38,66,92,52];
+  const cols=['#f8d77e','#ef5f93','#a25ddc','#7fd0ff','#7ad07a'];
+  for(let i=0;i<5;i++){
+    const ph=((frameCount + i*26)%96)/96, r=ph*32, a=1-ph;   // 0..1 životnost
+    ctx.globalAlpha=a; ctx.fillStyle=cols[i];
+    for(let k=0;k<12;k++){
+      const ang=k/12*Math.PI*2;
+      ctx.fillRect(px[i]+Math.cos(ang)*r-1, py[i]+Math.sin(ang)*r-1, 2, 2);
+    }
+  }
+  ctx.globalAlpha=1;
+}
+
 function drawMenu(){
   bgScreen();
+  const yrs = anniversaryYears();
+  if(yrs>0) drawFireworks();                          // 🎆 výroční ohňostroj na pozadí
+
   T('DR. WEDDING', W/2, 50, 24, '#f8d77e', 'center', true);
   heart(W/2-92, 40, 6, '#ef5f93'); heart(W/2+92, 40, 6, '#ef5f93');
   T('retro svatební duel pro dva', W/2, 68, 9, '#cba6ec', 'center');
 
-  const fy=170, bob=Math.sin(frameCount*0.1)*1.5;
-  drawGroom(108, fy+bob, 2.6);
-  drawBride(212, fy-bob, 2.6);
-  heart(160, 118+Math.sin(frameCount*0.12)*3, 6, '#ff5d8a');
+  const fy=170;
+  const attract = (performance.now()-lastInput) > IDLE_MS;   // nečinnost → attract režim
+  if(attract){
+    // tančící páreček: poskoky do rytmu, občas se přiblíží k pusince
+    const beat=frameCount*0.16;
+    const hopG=Math.abs(Math.sin(beat))*6, hopB=Math.abs(Math.cos(beat))*6;
+    const cyc=(frameCount%260)/260;
+    const tog = cyc>0.68 ? Math.sin((cyc-0.68)/0.32*Math.PI) : 0;   // 0→1→0: přiblížení
+    drawGroom(108 + tog*20, fy - hopG, 2.6);
+    drawBride(212 - tog*20, fy - hopB, 2.6);
+    if(tog>0.55) heart(160, 140, 5+tog*3, frameCount%6<3?'#ff5d8a':'#ef5f93');   // pusa
+    for(let k=0;k<6;k++){                                            // stoupající srdíčka
+      const yy=160-((frameCount*1.1 + k*38)%150), xx=160+Math.sin(frameCount*0.05+k)*54;
+      heart(xx, yy, 3, k%2?'#a25ddc':'#ef5f93');
+    }
+  } else {
+    const bob=Math.sin(frameCount*0.1)*1.5;
+    drawGroom(108, fy+bob, 2.6);
+    drawBride(212, fy-bob, 2.6);
+    heart(160, 118+Math.sin(frameCount*0.12)*3, 6, '#ff5d8a');
+  }
 
   const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
   const c2 = pendingAI ? '#f8d77e' : '#7a7a8a';
@@ -937,7 +983,13 @@ function drawMenu(){
 
   drawLevelSel(213);
 
-  if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
+  if(yrs>0) T('— ŠŤASTNÉ '+yrs+'. VÝROČÍ! —', W/2, 84, 9, '#f8d77e', 'center', true);
+
+  if(attract){
+    if(frameCount%60<40) T('— stiskni libovolnou klávesu —', W/2, 235, 8, '#cba6ec', 'center', true);
+  } else if(frameCount%50<32){
+    T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
+  }
 
   // indikátor zvuku (přepíná se klávesou M)
   T(muted?'M  ZVUK: VYP':'M  ZVUK: ZAP', W-5, 11, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
@@ -999,6 +1051,7 @@ function pollKeyboard(){
 
 window.addEventListener('keydown', e=>{
   keyHeld[e.code]=true;
+  lastInput=performance.now();                  // jakýkoli vstup ukončí attract režim v menu
   audioInit();                                  // jakákoli klávesa = gesto → rozběhni/obnov zvuk
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
   if(e.code==='KeyM'){ toggleMute(); return; }   // ztlumit / zapnout zvuk
@@ -1063,6 +1116,8 @@ function pollGamepads(){
     const cur = readPad(gp), prev = padPrev[i] || {};
     const hit = k => cur[k] && !prev[k];
 
+    if(cur.confirm||cur.start||cur.up||cur.down||cur.left||cur.right||cur.rotCW||cur.rotCCW)
+      lastInput=performance.now();                  // aktivita na ovladači ukončí attract režim
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
     if(mode==='menu'){
       if(hit('up')) pendingAI = false; else if(hit('down')) pendingAI = true;
@@ -1094,6 +1149,7 @@ function pollGamepads(){
   }
 }
 window.addEventListener('gamepadconnected', ()=>{});
+window.addEventListener('pointerdown', ()=>{ lastInput=performance.now(); });   // dotyk/myš ukončí attract
 
 //================= FULLSCREEN =================
 function toggleFull(){
