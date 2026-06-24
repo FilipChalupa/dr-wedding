@@ -33,7 +33,7 @@
   th { color:#f8a8c4; text-transform:uppercase; font-size:clamp(10px,1.3vh,12px); letter-spacing:.1vh; }
   .win-L { color:#cba6ec; font-weight:bold; }
   .win-R { color:#f8a8c4; font-weight:bold; }
-  .dur { text-align:right; white-space:nowrap; }
+  .dur, .vir { text-align:right; white-space:nowrap; }
   /* skóre: dvojtečky pod sebou — levé číslo doprava, pravé doleva, pevná šířka */
   .score { white-space:nowrap; }
   .score .sL { display:inline-block; min-width:4ch; text-align:right; }
@@ -129,7 +129,7 @@ function render(){
       +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
 
     let table='<table><thead><tr>'
-      +'<th>Začátek</th><th class="dur">Trvání</th><th>Starosti</th><th>Režim</th>'
+      +'<th>Začátek</th><th class="dur">Trvání</th><th class="vir">Starosti</th><th>Režim</th>'
       +'<th title="ženich : nevěsta">Skóre Ž:N</th><th>Vítěz</th>'
       +'</tr></thead><tbody>';
     for(const g of rows){
@@ -139,7 +139,7 @@ function render(){
       table+='<tr>'
         +'<td>'+fmtTime(g.startedAt)+'</td>'
         +'<td class="dur">'+fmtDur(g.durationMs)+'</td>'
-        +'<td>'+g.viruses+' (úroveň '+g.level+')</td>'
+        +'<td class="vir">'+g.viruses+' (úroveň '+g.level+')</td>'
         +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
         +'<td class="score"><span class="sL win-L">'+sL+'</span> : <span class="sR win-R">'+sR+'</span></td>'
         +'<td>'+win+'</td>'
