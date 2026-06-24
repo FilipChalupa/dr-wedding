@@ -1111,9 +1111,14 @@ function readPad(gp){
 }
 function pollGamepads(){
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let order = 0;                                 // pořadí připojeného ovladače → hráč (0=ženich, 1=nevěsta)
   for(let i=0;i<pads.length;i++){
     const gp = pads[i]; if(!gp) continue;
-    const cur = readPad(gp), prev = padPrev[i] || {};
+    // Stav vážeme na fyzický slot (gp.index), hráče ale přiřazujeme podle pořadí připojení,
+    // protože ovladače nemusí sedět ve slotech 0,1 (mezery / vyšší index → dřív selhal pohyb).
+    const slot = (gp.index!=null) ? gp.index : i;
+    const pIdx = order++;
+    const cur = readPad(gp), prev = padPrev[slot] || {};
     const hit = k => cur[k] && !prev[k];
 
     if(cur.confirm||cur.start||cur.up||cur.down||cur.left||cur.right||cur.rotCW||cur.rotCCW)
@@ -1127,7 +1132,7 @@ function pollGamepads(){
       if(hit('confirm')) mode='menu';
     } else if(mode==='play' && !ending){
       if(hit('start')) togglePause();
-      let p = players[i];
+      let p = players[pIdx];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
         if(hit('rotCW'))  rotate(p, 1);    // A / Y → po směru hodinových ručiček
@@ -1137,15 +1142,15 @@ function pollGamepads(){
         if(hit('down')) p.softDrop=true;
         else if(!cur.down) p.softDrop=false;
         const dir = cur.left ? -1 : cur.right ? 1 : 0;
-        const rep = padRepeat[i] || {dir:0,timer:0};
+        const rep = padRepeat[slot] || {dir:0,timer:0};
         if(dir!==0){
           if(rep.dir!==dir){ move(p,dir); rep.dir=dir; rep.timer=DAS_DELAY; }   // 1× hned + prodleva
           else if(--rep.timer<=0){ move(p,dir); rep.timer=DAS_RATE; }           // rychlé opakování
         } else { rep.dir=0; rep.timer=0; }
-        padRepeat[i] = rep;
+        padRepeat[slot] = rep;
       }
     }
-    padPrev[i] = cur;
+    padPrev[slot] = cur;
   }
 }
 window.addEventListener('gamepadconnected', ()=>{});
