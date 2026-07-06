@@ -557,8 +557,16 @@ function rotate(p, dir=1){
 }
 function lock(p){
   const cells=cellsOf(p.pill);
-  if(cells.some(c=>c.r<0)){ endGame(p,'lose'); return; }
+  // část kapsle, která čouhá nad horní hranu, se prostě zahodí (žádná smrt tady);
+  // placeInto pokládá jen buňky s r>=0.
   placeInto(p.grid,p.pill);
+  // pokud jedna půlka spadla mimo (nad hranu), druhá zůstane jako samostatný kousek
+  for(const cl of cells){
+    if(cl.r>=0 && cl.partner){
+      const [dr,dc]=DIR[cl.partner];
+      if(cl.r+dr<0){ const cell=p.grid[I(cl.r,cl.c)]; if(cell) cell.partner=null; }
+    }
+  }
   p.pill=null;
   if(!p.ai) Snd.lock();
   startResolve(p);
