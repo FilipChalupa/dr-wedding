@@ -230,13 +230,18 @@ const Snd = {
   },
   count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
   menu(){   tone(600,0.045,{type:'square',vol:0.10}); },   // krátké cvaknutí při změně nastavení v menu
-  win(){   // slavnostní svatební pochod (Wagner – Svatební sbor „Tady přichází nevěsta")
+  win(){   // slavnostní svatební pochod (Mendelssohn – Svatební pochod, C dur)
     if(muted||!actx) return;
-    const t0=actx.currentTime+0.05, q=0.42;          // délka čtvrťky (slavnostní tempo)
-    const N={G4:392,A4:440,C5:523,D5:587};
+    const t0=actx.currentTime+0.05, q=0.28;          // délka čtvrťky (svižné slavnostní tempo)
+    const N={G4:392,B4:494,C5:523,D5:587,E5:659,F5:698,G5:784};
     const mel=[
-      [N.G4,0.5],[N.C5,1.5],[N.C5,0.5],[N.C5,2],        // sol · do do do  („Tady přichází")
-      [N.C5,1],[N.D5,1],[N.C5,1],[N.A4,1],[N.G4,2],     // do re do la sol („nevěsta v bílém")
+      [N.C5,1.5],[N.B4,0.5],[N.C5,1],[N.G4,1],            // fanfára  „TAA-da da da"
+      [N.E5,1.5],[N.D5,0.5],[N.C5,1],[N.G4,1],            // odpověď  „TAA-da da da"
+      [N.C5,1],[N.E5,1],                                  // navázání
+      [N.G5,1.5],[N.F5,0.5],[N.E5,1],[N.D5,1],            // zpěvná fráze z vrcholu dolů
+      [N.C5,1.5],[N.D5,0.5],[N.E5,1],[N.G4,1],            // pokračování
+      [N.C5,1.5],[N.B4,0.5],[N.C5,1],[N.E5,1],            // návrat fanfáry
+      [N.D5,1],[N.G4,1],[N.C5,3],                         // velký závěr (V→I)
     ];
     let t=t0; const starts=[];
     for(const [f,d] of mel){
@@ -245,9 +250,14 @@ const Snd = {
       toneAt(f/2, t, d*q*0.9, {type:'triangle', vol:0.09});   // oktáva níž pro plnost
       t += d*q;
     }
-    toneAt(131, starts[1], q*2,   {type:'triangle', vol:0.13});  // basové C pod „přichází"
-    toneAt(131, starts[4], q*1.5, {type:'triangle', vol:0.13});  // basové C v druhé frázi
-    toneAt(98,  starts[8], q*2,   {type:'triangle', vol:0.13});  // basové G v závěru
+    // slavnostní basový doprovod na těžkých dobách
+    toneAt(131, starts[0],  q*2.5, {type:'triangle', vol:0.13});  // C
+    toneAt(131, starts[4],  q*2.5, {type:'triangle', vol:0.13});  // C
+    toneAt(131, starts[10], q*2,   {type:'triangle', vol:0.13});  // C (vrchol)
+    toneAt(131, starts[14], q*2,   {type:'triangle', vol:0.13});  // C
+    toneAt(131, starts[18], q*2,   {type:'triangle', vol:0.13});  // C
+    toneAt(98,  starts[22], q*2,   {type:'triangle', vol:0.13});  // G (dominanta)
+    toneAt(131, starts[24], q*3,   {type:'triangle', vol:0.14});  // C (závěr)
   },
 };
 
@@ -1046,6 +1056,8 @@ function drawMenu(){
 
   // indikátor zvuku (přepíná se klávesou M)
   T(muted?'M  ZVUK: VYP':'M  ZVUK: ZAP', W-5, 11, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
+
+  T('T = přehrát výherní znělku (test)', W/2, 11, 7, '#8a86a8', 'center');   // DOČASNÉ
 }
 
 function drawOver(){
@@ -1109,6 +1121,7 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyM'){ toggleMute(); return; }   // ztlumit / zapnout zvuk
 
   if(mode==='menu'){
+    if(e.code==='KeyT'){ audioInit(); Snd.win(); return; }   // DOČASNÉ: přehrát výherní znělku
     const prevAI=pendingAI, prevLevel=level;
     if(e.code==='KeyW'||e.code==='ArrowUp') pendingAI=false;
     else if(e.code==='KeyS'||e.code==='ArrowDown') pendingAI=true;
