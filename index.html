@@ -213,17 +213,20 @@ const Snd = {
   virus(){  tone(880,0.10,{type:'square',vol:0.10}); tone(1320,0.13,{type:'square',vol:0.07,when:0.06}); },
   combo(n){ for(let i=0;i<3;i++) tone(440*Math.pow(1.26,i+Math.min(n,4)),0.09,{type:'square',vol:0.10,when:i*0.07}); },
   garbage(){ tone(150,0.16,{type:'sawtooth',vol:0.09, slideTo:80}); },
-  attack(n){   // dramatická znělka při odeslání smetí soupeři (graduje s množstvím)
+  attack(n, side){   // dramatická znělka útoku; nevěsta zní výš a jiným témbrem (poznat, kdo posílá)
     if(muted||!actx) return;
     const t=actx.currentTime+0.02;                  // nepatrný předstih, ať nesplyne se zvukem mazání
+    const bride = side==='R';
+    const mul  = bride ? 4/3 : 1;                    // nevěsta o čistou kvartu výš
+    const lead = bride ? 'square' : 'sawtooth';      // + jiný tvar vlny
     const notes=[330,392,494,659,784];              // E G B E G — hlasitá vzestupná fanfára
     const steps=Math.max(3, Math.min(notes.length, 2+n));
     for(let i=0;i<steps;i++){
-      toneAt(notes[i],   t+i*0.06, 0.16, {type:'sawtooth', vol:0.20});   // výrazný vedoucí hlas
-      toneAt(notes[i]/2, t+i*0.06, 0.16, {type:'square',   vol:0.08});   // spodní oktáva pro tělo
+      toneAt(notes[i]*mul,   t+i*0.06, 0.16, {type:lead,     vol:0.20});   // výrazný vedoucí hlas
+      toneAt(notes[i]/2*mul, t+i*0.06, 0.16, {type:'square', vol:0.08});   // spodní oktáva pro tělo
     }
-    toneAt(98, t, 0.34, {type:'sawtooth', vol:0.18, slideTo:60});             // úderný basový doraz
-    toneAt(notes[steps-1]*2, t+steps*0.06, 0.28, {type:'square', vol:0.16});  // finální vysoký akcent
+    toneAt(98*mul, t, 0.34, {type:'sawtooth', vol:0.18, slideTo:60*mul});          // úderný basový doraz
+    toneAt(notes[steps-1]*2*mul, t+steps*0.06, 0.28, {type:'square', vol:0.16});   // finální vysoký akcent
   },
   count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
   win(){    const m=[523,659,784,1047]; m.forEach((f,i)=>tone(f,0.18,{type:'square',vol:0.12,when:i*0.13})); },
@@ -313,9 +316,9 @@ const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmize
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
-// pád kapsle: snímků na jedno políčko — start pomalý, postupně zrychluje
-// DROP_GRACE = úvodní vteřiny bez zrychlování (aby hra nezrychlila moc brzy)
-const DROP_START = 95, DROP_MIN = 22, DROP_RAMP = 0.5, DROP_GRACE = 25;
+// pád kapsle: snímků na jedno políčko — start pomalý, zrychluje skokově.
+// DROP_GRACE = úvodní vteřiny bez zrychlování; pak každých DROP_EVERY s ubere DROP_STEP snímků.
+const DROP_START = 95, DROP_MIN = 22, DROP_STEP = 6, DROP_EVERY = 22, DROP_GRACE = 15;
 
 // --- Velikonoční vajíčka ---
 const WEDDING = { year:2026, month:8, day:7 };      // svatba 7. srpna 2026 → výročí od 7. 8. 2027
@@ -530,13 +533,21 @@ function lock(p){
 }
 function dropGarbage(p){
   const q=p.pendingGarbage; p.pendingGarbage=[];
-  for(const col of q){
-    const c=(Math.random()*COLS)|0;
-    // polož úplně nahoru (nejvyšší volné políčko) — animovaná gravitace pak nechá spadnout shora
-    let r=0;
-    while(r<ROWS && p.grid[I(r,c)]) r++;
-    if(r>=ROWS) continue;          // sloupec plný
-    p.grid[I(r,c)] = {color:col, kind:'pill', partner:null};
+  // každý kousek do jiného sloupce (zamíchané pořadí); barva odpovídá zničené linii
+  const cols=[]; for(let c=0;c<COLS;c++) cols.push(c);
+  for(let i=cols.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cols[i],cols[j]]=[cols[j],cols[i]]; }
+  let ci=0;
+  for(const color of q){
+    // najdi další (pokud možno dosud nepoužitý) sloupec, kam se kousek ještě vejde
+    let placed=false;
+    for(let tries=0; tries<COLS; tries++){
+      const c=cols[ci%COLS]; ci++;
+      // polož úplně nahoru (nejvyšší volné políčko) — animovaná gravitace ho pak nechá spadnout shora
+      let r=0;
+      while(r<ROWS && p.grid[I(r,c)]) r++;
+      if(r<ROWS){ p.grid[I(r,c)] = {color, kind:'pill', partner:null}; placed=true; break; }
+    }
+    if(!placed) break;             // celá deska plná
   }
 }
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
@@ -572,13 +583,13 @@ function resolveStep(p){
 }
 function finishResolve(p){
   p.busy=false; p.flashes=[];
-  // smetí: soupeř dostane tolik kostiček, kolik bylo zničeno řad/sloupců MÍNUS jedna
-  // (za jednu kapsli, napříč celým řetězem). Jedna linie = nic, dvě = 1, tři = 2 …
-  const garbage = p.gainGarbage.slice(1);
+  // smetí: soupeř dostane tolik kostiček, kolik bylo zničeno řad/sloupců
+  // (za jednu kapsli, napříč celým řetězem). Barvy odpovídají zničeným liniím.
+  const garbage = p.gainGarbage;
   if(garbage.length){
     const o=other(p);
     for(const col of garbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
-    Snd.attack(garbage.length);              // dramatická znělka útoku (u odesílatele)
+    Snd.attack(garbage.length, p.side);      // dramatická znělka útoku (jinak pro ženicha/nevěstu)
     if(!o.ai) Snd.garbage();                 // soupeř (člověk) slyší příchozí smetí
   }
   if(p.chains>1){ p.comboTimer=46; p.comboN=p.chains; Snd.combo(p.chains); }
@@ -686,8 +697,10 @@ function startGame(ai){
   musicStop(); musicStart();               // hudba na pozadí (hraje i během odpočtu)
 }
 function dropIntervalNow(){
+  // rychlost roste skokově: po odečtení grace každých DROP_EVERY sekund o DROP_STEP snímků
   const sec = Math.max(0, (performance.now()-gameStart)/1000 - DROP_GRACE);
-  return Math.max(DROP_MIN, DROP_START - sec*DROP_RAMP);
+  const steps = Math.floor(sec / DROP_EVERY);
+  return Math.max(DROP_MIN, DROP_START - steps*DROP_STEP);
 }
 function updatePlayer(p){
   if(mode!=='play') return;
