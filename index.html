@@ -213,6 +213,15 @@ const Snd = {
   virus(){  tone(880,0.10,{type:'square',vol:0.10}); tone(1320,0.13,{type:'square',vol:0.07,when:0.06}); },
   combo(n){ for(let i=0;i<3;i++) tone(440*Math.pow(1.26,i+Math.min(n,4)),0.09,{type:'square',vol:0.10,when:i*0.07}); },
   garbage(){ tone(150,0.16,{type:'sawtooth',vol:0.09, slideTo:80}); },
+  attack(n){   // krátká dramatická znělka při odeslání smetí soupeři (graduje s množstvím)
+    if(muted||!actx) return;
+    const t=actx.currentTime;
+    const notes=[262,330,392,523,659];              // C E G C E — vzestupná fanfára
+    const steps=Math.max(2, Math.min(notes.length, 1+n));
+    for(let i=0;i<steps;i++) toneAt(notes[i], t+i*0.05, 0.14, {type:'square', vol:0.12});
+    toneAt(98, t, 0.30, {type:'sawtooth', vol:0.14, slideTo:66});             // úderný basový doraz
+    toneAt(notes[steps-1]*2, t+steps*0.05, 0.22, {type:'square', vol:0.10});  // finální vysoký akcent
+  },
   count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
   win(){    const m=[523,659,784,1047]; m.forEach((f,i)=>tone(f,0.18,{type:'square',vol:0.12,when:i*0.13})); },
 };
@@ -531,8 +540,8 @@ function resolveStep(p){
         p.chains++; p.gainCells+=mark.size;
         const vBefore=p.gainVir;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
-        // smetí: každá zničená řada/sloupec pošle soupeři svou barvu jako
-        // samostatnou kostičku (víc linií naráz i combo/řetěz = víc smetí)
+        // posbírej barvy všech zničených řad/sloupců; na konci (finishResolve)
+        // z nich soupeř dostane počet MÍNUS jedna (víc linií naráz i řetěz = víc smetí)
         for(const col of runs) p.gainGarbage.push(col);
         p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
         if(p.gainVir>0) p.animClear=26;
@@ -548,9 +557,13 @@ function resolveStep(p){
 }
 function finishResolve(p){
   p.busy=false; p.flashes=[];
-  if(p.gainGarbage.length){
+  // smetí: soupeř dostane tolik kostiček, kolik bylo zničeno řad/sloupců MÍNUS jedna
+  // (za jednu kapsli, napříč celým řetězem). Jedna linie = nic, dvě = 1, tři = 2 …
+  const garbage = p.gainGarbage.slice(1);
+  if(garbage.length){
     const o=other(p);
-    for(const col of p.gainGarbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
+    for(const col of garbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
+    Snd.attack(garbage.length);              // dramatická znělka útoku (u odesílatele)
     if(!o.ai) Snd.garbage();                 // soupeř (člověk) slyší příchozí smetí
   }
   if(p.chains>1){ p.comboTimer=46; p.comboN=p.chains; Snd.combo(p.chains); }
