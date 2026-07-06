@@ -536,19 +536,13 @@ function dropGarbage(p){
   // každý kousek do jiného sloupce (zamíchané pořadí); barva odpovídá zničené linii
   const cols=[]; for(let c=0;c<COLS;c++) cols.push(c);
   for(let i=cols.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cols[i],cols[j]]=[cols[j],cols[i]]; }
-  let ci=0;
-  for(const color of q){
-    // najdi další (pokud možno dosud nepoužitý) sloupec, kam se kousek ještě vejde
-    let placed=false;
-    for(let tries=0; tries<COLS; tries++){
-      const c=cols[ci%COLS]; ci++;
-      // polož úplně nahoru (nejvyšší volné políčko) — animovaná gravitace ho pak nechá spadnout shora
-      let r=0;
-      while(r<ROWS && p.grid[I(r,c)]) r++;
-      if(r<ROWS){ p.grid[I(r,c)] = {color, kind:'pill', partner:null}; placed=true; break; }
-    }
-    if(!placed) break;             // celá deska plná
-  }
+  q.forEach((color, k)=>{
+    // kousek cílí právě na svůj sloupec — plné nepřeskakujeme (padne-li shodná barva na vysoký
+    // sloupec, může doplnit linii a odblokovat ho). Jen když je sloupec plný až nahoru, propadne.
+    const c=cols[k%COLS];
+    let r=0; while(r<ROWS && p.grid[I(r,c)]) r++;
+    if(r<ROWS) p.grid[I(r,c)] = {color, kind:'pill', partner:null};
+  });
 }
 // krokové (animované) řešení: padání -> outline -> mazání -> padání ...
 function startResolve(p){
