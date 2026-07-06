@@ -345,6 +345,7 @@ function newPlayer(side){
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
+    dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
     score:0,
     ai:false, aiPlan:null, aiTimer:0,
   };
@@ -560,8 +561,8 @@ function resolveStep(p){
         p.chains++; p.gainCells+=mark.size;
         const vBefore=p.gainVir;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
-        // posbírej barvy všech zničených řad/sloupců; na konci (finishResolve)
-        // z nich soupeř dostane počet MÍNUS jedna (víc linií naráz i řetěz = víc smetí)
+        // posbírej barvy všech zničených řad/sloupců za celý tah;
+        // finishResolve pak podle jejich počtu (od dvou výš) pošle smetí soupeři
         for(const col of runs) p.gainGarbage.push(col);
         p.flashes=[]; mark.forEach(i=>p.flashes.push({r:(i/COLS)|0, c:i%COLS}));
         if(p.gainVir>0) p.animClear=26;
@@ -577,9 +578,10 @@ function resolveStep(p){
 }
 function finishResolve(p){
   p.busy=false; p.flashes=[];
-  // smetí: soupeř dostane tolik kostiček, kolik bylo zničeno řad/sloupců
-  // (za jednu kapsli, napříč celým řetězem). Barvy odpovídají zničeným liniím.
-  const garbage = p.gainGarbage;
+  // smetí: záleží jen na tom, kolik řad/sloupců hráč v tahu zničil (ne na starostech).
+  // Posílá se od DVOU zničených linií výš — tolik kostiček, kolik bylo linií. Jedna linie = nic.
+  // Barvy odpovídají zničeným liniím.
+  const garbage = p.gainGarbage.length>=2 ? p.gainGarbage : [];
   if(garbage.length){
     const o=other(p);
     for(const col of garbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
@@ -599,6 +601,7 @@ function endGame(p,res){
   freezeEnd=performance.now()+FREEZE_MS;
   winner = (res==='win') ? p : other(p);
   winner.celebrate=0;
+  if(res==='lose') p.dead=true;              // p se zaplácal až nahoru → blikne mu celá láhev
   musicStop();
   Snd.win();
   logGame();
@@ -810,6 +813,11 @@ function drawBoard(p,x0){
     for(const cl of cellsOf(p.pill)){
       if(cl.r>=0) drawCell(x0+cl.c*CELL, BY+cl.r*CELL, {color:cl.color,kind:'pill',partner:cl.partner});
     }
+  }
+  // úmrtí: zaplácaná láhev výrazně bliká na červeno („pokazilo se")
+  if(p.dead && Math.floor(frameCount/6)%2===0){
+    ctx.fillStyle='rgba(232,75,75,0.55)';
+    ctx.fillRect(x0,BY,BW,BH);
   }
   // glass frame
   ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2;
