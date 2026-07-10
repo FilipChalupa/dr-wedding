@@ -3,8 +3,8 @@
 //   - online: vždy zkus síť, čerstvou odpověď ulož do cache a vrať ji
 //   - offline / síť selže: vrať poslední uloženou verzi z cache
 // (Funguje jen při hostování přes http(s) nebo localhost, ne přes file://.)
-const CACHE = 'dr-wedding-v1';
-const ASSETS = ['./', 'index.html', 'stats.html'];
+const CACHE = 'dr-wedding-v2';
+const ASSETS = ['./', 'index.html', 'stats.html', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e=>{
   self.skipWaiting();                                  // nová verze SW se aktivuje hned

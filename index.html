@@ -2,8 +2,17 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Dr. Wedding</title>
+<meta name="description" content="Dr. Wedding — retro svatební duel pro dva (klon Dr. Mario).">
+<meta name="theme-color" content="#241a11">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dr. Wedding">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body {
@@ -19,7 +28,7 @@
   /* ---- the TV cabinet ---- */
   .tv {
     position:relative;
-    padding:3.2vh 3.4vh 5.5vh 3.4vh;
+    padding:2.6vh 3.4vh 2.4vh 3.4vh;
     border-radius:2.2vh;
     background:linear-gradient(160deg,#5a4632 0%,#3a2c1d 35%,#241a11 100%);
     box-shadow:
@@ -28,20 +37,17 @@
       0 14px 40px rgba(0,0,0,.8),
       0 2px 0 rgba(255,255,255,.05);
     border:2px solid #1a120a;
+    display:flex; flex-direction:column; align-items:center; gap:1.4vh;
+    max-height:100vh;
   }
   .tv::before { /* speaker / detail strip */
-    content:""; position:absolute; right:3.4vh; bottom:1.1vh;
-    width:5vh; height:2.6vh; border-radius:3px;
+    content:""; position:absolute; right:3.4vh; bottom:1.6vh;
+    width:4.4vh; height:2.2vh; border-radius:3px;
     background:repeating-linear-gradient(90deg,#1a120a 0 2px,#3a2c1d 2px 4px);
     box-shadow:inset 0 0 3px #000;
   }
-  .brand {
-    position:absolute; left:3.6vh; bottom:1.4vh;
-    font-size:1.7vh; letter-spacing:.25vh; font-weight:bold;
-    color:#e7c98c; text-shadow:0 1px 0 #000; font-style:italic;
-  }
   .led {
-    position:absolute; left:50%; transform:translateX(-50%); bottom:1.9vh;
+    position:absolute; left:3.6vh; bottom:2.3vh;
     width:1vh; height:1vh; border-radius:50%;
     background:#ff5d5d; box-shadow:0 0 6px 2px rgba(255,80,80,.8);
     animation:pulse 2.4s infinite;
@@ -51,7 +57,7 @@
   /* ---- the screen ---- */
   .screen {
     position:relative;
-    width:min(86vw, 116vh);
+    width:min(86vw, 112vh);
     aspect-ratio:4/3;
     background:#000;
     border-radius:6% / 8%;
@@ -89,17 +95,19 @@
   }
   @keyframes flick { 0%{opacity:.5} 50%{opacity:.9} 100%{opacity:.4} }
 
+  /* tlačítka přímo na hnědé skříni televize (zjednodušená, tmavá) */
   .controls {
-    margin-top:2.4vh; display:flex; gap:1.4vh; z-index:20;
+    display:flex; gap:1.2vh; z-index:20;
   }
   .controls button {
-    font-family:inherit; font-size:1.7vh; font-weight:bold;
-    padding:.9vh 1.8vh; border-radius:1vh; cursor:pointer;
-    color:#1a120a; border:2px solid #1a120a;
-    background:linear-gradient(#f0d79a,#c9a85e);
-    box-shadow:0 2px 0 #1a120a; letter-spacing:.1vh;
+    font-family:inherit; font-size:1.35vh; font-weight:bold;
+    padding:.55vh 1.3vh; border-radius:.7vh; cursor:pointer;
+    color:#e7c98c; border:1px solid #120c06; letter-spacing:.06vh;
+    background:linear-gradient(#4a3826,#2a1e13);
+    box-shadow:inset 0 1px 0 rgba(255,220,180,.18), 0 1px 0 #120c06;
+    text-shadow:0 1px 0 #000;
   }
-  .controls button:active { transform:translateY(2px); box-shadow:none; }
+  .controls button:active { transform:translateY(1px); box-shadow:inset 0 1px 2px #000; }
 
   :fullscreen.tv, :-webkit-full-screen.tv {
     width:100vw; height:100vh; border-radius:0;
@@ -110,7 +118,8 @@
     width:min(100vw,133.333vh); height:auto;
     border-radius:0; box-shadow:inset 0 0 9vh rgba(0,0,0,.95);
   }
-  :fullscreen.tv .brand, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
+  :fullscreen.tv .controls, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
+  :-webkit-full-screen.tv .controls, :-webkit-full-screen.tv .led, :-webkit-full-screen.tv::before { display:none; }
 
   /* ---- ?tv : kiosk režim pro fyzickou televizi (skryje skříň + tlačítka) ---- */
   body.tvmode { background:#000; }
@@ -120,7 +129,7 @@
     background:#000; box-shadow:none;
     display:flex; align-items:center; justify-content:center;
   }
-  body.tvmode .tv::before, body.tvmode .brand, body.tvmode .led { display:none; }
+  body.tvmode .tv::before, body.tvmode .led { display:none; }
   body.tvmode .screen {
     width:min(100vw,133.333vh); height:auto;
     border-radius:0;
@@ -136,13 +145,12 @@
       <div class="glow"></div>
       <div class="flicker"></div>
     </div>
-    <div class="brand">WEDDITRON&nbsp;//&nbsp;MODEL&nbsp;DW-1</div>
+    <div class="controls">
+      <button id="btnStart">▶ START</button>
+      <button id="btnFull">⛶ FULLSCREEN</button>
+      <button id="btnStats">📊 STATISTIKY</button>
+    </div>
     <div class="led"></div>
-  </div>
-  <div class="controls">
-    <button id="btnStart">▶ START</button>
-    <button id="btnFull">⛶ FULLSCREEN</button>
-    <button id="btnStats">📊 STATISTIKY</button>
   </div>
 
 <script>
@@ -890,7 +898,9 @@ function drawBoard(p,x0){
   // glass frame
   ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2;
   rr(x0-2.5,BY-1,BW+5,BH+3,3); ctx.stroke();
-  ctx.fillStyle='rgba(200,224,255,0.5)'; ctx.fillRect(x0-5,BY-5,BW+10,3);
+  // užší hrdlo lahve — jen nad středem (nad zónou, kam padají kapsle)
+  const neckW=CELL*2.8, neckX=x0+(BW-neckW)/2;
+  ctx.fillStyle='rgba(200,224,255,0.5)'; ctx.fillRect(neckX-2,BY-5,neckW+4,3);
   ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(x0+2,BY+2,3,BH-6);
 
   if(p.comboTimer>0){
@@ -1024,13 +1034,14 @@ function drawPlay(hideSide){
   if(!hideSide){
     drawGroom(34, BY+BH-2 + bobL + jumpL, 3);
     drawBride(286, BY+BH-2 + bobR + jumpR, 3);
+    // jména pod postavičkami (dřív visela nad sklenicemi)
+    T('ŽENICH',  34,  BY+BH+9, 8, '#cba6ec', 'center', true);
+    T('NEVĚSTA', 286, BY+BH+9, 8, '#f8a8c4', 'center', true);
   }
 
   drawBoard(players[0], LX0);
   drawBoard(players[1], RX0);
 
-  T('ŽENICH',  LX0+BW/2, BY-6, 9, '#cba6ec', 'center', true);
-  T('NEVĚSTA', RX0+BW/2, BY-6, 9, '#f8a8c4', 'center', true);
   T('STAROSTI: '+players[0].virusCount, LX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
   T('STAROSTI: '+players[1].virusCount, RX0+BW/2, BY+BH+12, 8, '#e7e0ff', 'center');
 

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dr. Wedding">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+      <stop offset="0%" stop-color="#3a2c1d"/>
+      <stop offset="100%" stop-color="#160f08"/>
+    </radialGradient>
+  </defs>
+  <!-- plná plocha kvůli maskable ikoně -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- zlatý snubní prsten -->
+  <circle cx="256" cy="250" r="122" fill="none" stroke="#f8d77e" stroke-width="22"/>
+  <circle cx="256" cy="128" r="15" fill="#f8e07e"/>
+  <!-- srdce -->
+  <path d="M256 342 C256 300 188 286 188 234 C188 202 226 192 256 224 C286 192 324 202 324 234 C324 286 256 300 256 342 Z" fill="#ef5f93"/>
+</svg>

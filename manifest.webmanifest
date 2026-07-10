@@ -1,0 +1,17 @@
+{
+  "name": "Dr. Wedding",
+  "short_name": "Dr. Wedding",
+  "description": "Retro svatební duel pro dva — klon Dr. Mario.",
+  "lang": "cs",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#08080c",
+  "theme_color": "#241a11",
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}
