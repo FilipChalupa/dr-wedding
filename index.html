@@ -897,24 +897,23 @@ function drawGlass(x0){
   const neckHalf=CELL*1.5;        // svislý krk
   const lipHalf=CELL*2;           // lem (širší než krk, ale pořád uvnitř pole)
   const bottom=BY+BH+2, r=3;
-  const bodyTopY=BY-1;            // horní hrana svislých stěn těla
-  const neckBaseY=bodyTopY-7;     // vršek ramene / pata krku
-  const lipBaseY=neckBaseY-3;     // vršek krku / pata lemu
+  const bodyTopY=BY-1;            // horní hrana těla (vodorovné bočnice)
+  const lipBaseY=bodyTopY-7;      // vršek krku / pata lemu
   const lipTopY=lipBaseY-2;       // vrch lemu
   ctx.save();
   ctx.lineJoin='miter'; ctx.lineCap='butt';    // hranaté rohy
   ctx.beginPath();
   ctx.moveTo(cx-bodyHalf, bottom-r);
   ctx.lineTo(cx-bodyHalf, bodyTopY);                     // levá stěna nahoru
-  ctx.lineTo(cx-neckHalf, neckBaseY);                    // hranaté levé rameno (rovný úkos)
+  ctx.lineTo(cx-neckHalf, bodyTopY);                     // vodorovná levá bočnice
   ctx.lineTo(cx-neckHalf, lipBaseY);                     // krk nahoru
   ctx.lineTo(cx-lipHalf, lipBaseY);                      // nákružek ven
   ctx.lineTo(cx-lipHalf, lipTopY);                       // nákružek nahoru
   ctx.lineTo(cx+lipHalf, lipTopY);                       // vrch nákružku
   ctx.lineTo(cx+lipHalf, lipBaseY);                      // nákružek dolů
   ctx.lineTo(cx+neckHalf, lipBaseY);                     // nákružek dovnitř
-  ctx.lineTo(cx+neckHalf, neckBaseY);                    // krk dolů
-  ctx.lineTo(cx+bodyHalf, bodyTopY);                     // hranaté pravé rameno (rovný úkos)
+  ctx.lineTo(cx+neckHalf, bodyTopY);                     // krk dolů
+  ctx.lineTo(cx+bodyHalf, bodyTopY);                     // vodorovná pravá bočnice
   ctx.lineTo(cx+bodyHalf, bottom-r);                     // pravá stěna dolů
   ctx.arcTo(cx+bodyHalf, bottom, cx+bodyHalf-r, bottom, r);   // pravý dolní roh
   ctx.lineTo(cx-bodyHalf+r, bottom);
