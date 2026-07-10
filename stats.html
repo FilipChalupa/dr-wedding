@@ -97,9 +97,9 @@ function render(){
   }
 
   // celkový souhrn napříč všemi dny
-  let tWL=0,tWR=0,tAI=0,tTime=0,tLongest=0;
+  let tWL=0,tWR=0,tDraw=0,tAI=0,tTime=0,tLongest=0;
   for(const g of games){
-    if(g.winner==='L') tWL++; else tWR++;
+    if(g.winner==='L') tWL++; else if(g.winner==='R') tWR++; else tDraw++;
     if(g.vsAI) tAI++;
     tTime+=g.durationMs;
     if(g.durationMs>tLongest) tLongest=g.durationMs;
@@ -110,7 +110,8 @@ function render(){
     +'<div><span class="v win-R">'+tWR+'</span><span class="l">Nevěsta</span></div>'
     +'</div><div class="meta">celkem odehráno <b>'+fmtDur(tTime)+'</b>'
     +' · nejdelší hra <b>'+fmtDur(tLongest)+'</b>'
-    +' · vs počítač <b>'+tAI+'×</b></div></div>';
+    +' · vs počítač <b>'+tAI+'×</b>'
+    +(tDraw? ' · remízy <b>'+tDraw+'×</b>' : '')+'</div></div>';
 
   // seskupení po dnech (sestupně, protože hry jsou seřazené sestupně)
   const order=[]; const groups=new Map();
@@ -119,8 +120,8 @@ function render(){
   let page=0;   // 0 = nejnovější den
   function draw(){
     const key=order[page], rows=groups.get(key);
-    let wL=0,wR=0,ai=0,total=0;
-    for(const g of rows){ if(g.winner==='L') wL++; else wR++; if(g.vsAI) ai++; total+=g.durationMs; }
+    let wL=0,wR=0,dCount=0,ai=0,total=0;
+    for(const g of rows){ if(g.winner==='L') wL++; else if(g.winner==='R') wR++; else dCount++; if(g.vsAI) ai++; total+=g.durationMs; }
 
     const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'+overall
       +'<div class="nav">'
@@ -131,6 +132,7 @@ function render(){
       +'<div class="pageno">den '+(page+1)+' / '+order.length+'</div>'
       +'<div class="sum">'+rows.length+' '+plural(rows.length,'hra','hry','her')
       +' · ženich <b>'+wL+'×</b> · nevěsta <b>'+wR+'×</b>'
+      +(dCount? ' · remízy <b>'+dCount+'×</b>' : '')
       +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
 
     let table='<table><thead><tr>'
@@ -138,8 +140,9 @@ function render(){
       +'<th title="ženich : nevěsta">Skóre Ž:N</th><th>Vítěz</th>'
       +'</tr></thead><tbody>';
     for(const g of rows){
-      const win = g.winner==='L'
-        ? '<span class="win-L">Ženich</span>' : '<span class="win-R">Nevěsta</span>';
+      const win = g.winner==='L' ? '<span class="win-L">Ženich</span>'
+        : g.winner==='R' ? '<span class="win-R">Nevěsta</span>'
+        : '<span>Remíza</span>';
       const sL=g.scoreL==null?'–':g.scoreL, sR=g.scoreR==null?'–':g.scoreR;
       table+='<tr>'
         +'<td>'+fmtTime(g.startedAt)+'</td>'

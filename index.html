@@ -356,6 +356,12 @@ let paused = false;
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
 const FREEZE_MS = 900;
+// remíza: kdo první doklikal viry, dostane druhý krátké okno na dohrání → pak remíza
+let winPending = false;                 // běží okno, ve kterém může druhý dorovnat
+let firstDone = null;                   // hráč, který doklikal viry první
+let winDeadline = 0;                    // čas (ms), do kdy může druhý stihnout remízu
+let isDraw = false;                     // hra skončila remízou
+const WIN_GRACE_MS = 800;               // délka okna na dorovnání
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
@@ -414,9 +420,18 @@ function newPlayer(side){
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
     dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
+    clearedDone:false,          // true = už doklikal všechny viry (aby se to spustilo jen jednou)
     score:0,
     ai:false, aiPlan:null, aiTimer:0,
   };
+}
+// hráč doklikal všechny viry: první spustí okno na dorovnání, druhý v okně → remíza
+function checkCleared(p){
+  if(p.clearedDone || mode!=='play' || ending) return;
+  if(countViruses(p.grid)!==0) return;
+  p.clearedDone=true;
+  if(!winPending){ winPending=true; firstDone=p; winDeadline=performance.now()+WIN_GRACE_MS; }
+  else if(p!==firstDone) endGame(null,'draw');   // druhý stihl v okně → remíza
 }
 
 function other(p){ return players[0]===p ? players[1] : players[0]; }
@@ -657,6 +672,10 @@ function resolveStep(p){
         p.chains++; p.gainCells+=mark.size;
         const vBefore=p.gainVir;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
+        if(p.gainVir>vBefore){                      // zmizela nějaká starost
+          p.virusCount=countViruses(p.grid);        // → ihned sniž počítadlo dole (nečekej na konec kaskády)
+          if(p.virusCount===0) checkCleared(p);     // doklikáno → vítěz / okno na remízu
+        }
         // posbírej barvy všech zničených řad/sloupců za celý tah;
         // finishResolve pak podle jejich počtu (od dvou výš) pošle smetí soupeři
         for(const col of runs) p.gainGarbage.push(col);
@@ -687,7 +706,7 @@ function finishResolve(p){
   if(p.chains>1){ p.comboTimer=46; p.comboN=p.chains; Snd.combo(p.chains); }
   p.score += p.gainCells*10 + p.gainVir*50;
   p.virusCount=countViruses(p.grid);
-  if(p.virusCount===0) endGame(p,'win');
+  if(p.virusCount===0) checkCleared(p);
 }
 
 function endGame(p,res){
@@ -695,15 +714,18 @@ function endGame(p,res){
   paused=false;
   ending=true;                               // na chvíli zamrzni, pak výherní obrazovka
   freezeEnd=performance.now()+FREEZE_MS;
-  winner = (res==='win') ? p : other(p);
-  winner.celebrate=0;
-  if(res==='lose') p.dead=true;              // p se zaplácal až nahoru → blikne mu celá láhev
+  if(res==='draw'){ isDraw=true; winner=null; }   // remíza — bez vítěze
+  else {
+    winner = (res==='win') ? p : other(p);
+    winner.celebrate=0;
+    if(res==='lose') p.dead=true;            // p se zaplácal až nahoru → blikne mu celá láhev
+  }
   musicStop();
   Snd.win();
   logGame();
 }
 function logGame(){
-  if(gameLogged || !winner) return;
+  if(gameLogged || (!winner && !isDraw)) return;
   gameLogged=true;
   const durationMs = Math.max(0, Math.round(performance.now()-gameStart));
   saveGame({
@@ -713,7 +735,7 @@ function logGame(){
     level,                              // 1..5 (6 = hardcore)
     viruses: virusesAt(level),          // počet starostí
     vsAI: !!players[1].ai,
-    winner: winner.side,                // 'L' = ženich, 'R' = nevěsta
+    winner: isDraw ? 'draw' : winner.side,   // 'L' = ženich, 'R' = nevěsta, 'draw' = remíza
     scoreL: players[0].score,
     scoreR: players[1].score,
   });
@@ -781,6 +803,7 @@ function startGame(ai){
   for(const p of players){ p.pillIdx=0; p.next=pillAt(0); }
   players[1].ai = ai;
   winner=null;
+  winPending=false; firstDone=null; isDraw=false;   // reset stavu remízy
   paused=false;
   ending=false;
   countdownEnd=performance.now()+COUNTDOWN_MS;
@@ -800,11 +823,12 @@ function dropIntervalNow(){
 }
 function updatePlayer(p){
   if(mode!=='play') return;
+  if(winPending && p===firstDone) return;    // už doklikal → zamrzne a čeká, jestli druhý dorovná
   if(p.busy){ resolveStep(p); return; }      // animace padání / mazání
   if(!p.pill){
     if(p.pendingGarbage.length>0){ dropGarbage(p); startResolve(p); return; }   // smetí spadne animovaně
     p.virusCount=countViruses(p.grid);
-    if(p.virusCount===0){ endGame(p,'win'); return; }
+    if(p.virusCount===0){ checkCleared(p); return; }
     const np=p.next; p.next=pillAt(++p.pillIdx);   // další kapsle ze sdílené sekvence
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
@@ -844,6 +868,8 @@ function update(){
     if(p.comboTimer>0) p.comboTimer--;
     if(p.animClear>0) p.animClear--;
   }
+  // vypršelo okno na dorovnání → vítězí ten, kdo doklikal první
+  if(winPending && !ending && performance.now()>=winDeadline) endGame(firstDone,'win');
 }
 
 //================= RENDER =================
@@ -1174,7 +1200,7 @@ function drawMenu(){
 function drawOver(){
   drawPlay(true);
   ctx.fillStyle='rgba(6,8,20,0.82)'; ctx.fillRect(0,0,W,H);
-  T('PRÁVĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
+  T(isDraw ? 'OBA SEZDÁNI!' : 'PRÁVĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
 
   for(let i=0;i<8;i++){
     const a=(frameCount*0.02 + i);
@@ -1188,10 +1214,15 @@ function drawOver(){
   drawBride(182, fy, 3.2);
   heart(160, 108, 7, frameCount%30<15?'#ff5d8a':'#ef5f93');
 
-  const wc = winner.side==='L' ? 138 : 182;
-  drawCrown(wc, fy - 3.2*37.5, 1.3);
-  const wname = winner.side==='L' ? 'ŽENICH' : 'NEVĚSTA';
-  T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
+  if(isDraw){
+    drawCrown(138, fy - 3.2*37.5, 1.3); drawCrown(182, fy - 3.2*37.5, 1.3);   // korunka oběma
+    T('— REMÍZA —', W/2, 210, 12, '#f8d77e', 'center', true);
+  } else {
+    const wc = winner.side==='L' ? 138 : 182;
+    drawCrown(wc, fy - 3.2*37.5, 1.3);
+    const wname = winner.side==='L' ? 'ŽENICH' : 'NEVĚSTA';
+    T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
+  }
   if(frameCount%50<32) T('hrát znovu', W/2, 228, 9, '#ffffff', 'center');
 }
 
