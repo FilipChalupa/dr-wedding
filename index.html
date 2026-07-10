@@ -351,6 +351,30 @@ const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // DROP_GRACE = úvodní vteřiny bez zrychlování; pak každých DROP_EVERY s ubere DROP_STEP snímků.
 const DROP_START = 95, DROP_MIN = 22, DROP_STEP = 6, DROP_EVERY = 22, DROP_GRACE = 15;
 
+// --- Hardcore easter egg (odemkne se v menu; zmizí po přenačtení stránky nebo po spuštění jiného než hardcore levelu) ---
+let hardcoreUnlocked = false;          // jen v paměti → po reloadu stránky zase zmizí
+let rightHoldFrames = 0;               // jak dlouho se v menu drží doprava (odemče po 5 s)
+let maxRightPresses = 0;               // kolikrát po sobě zmáčknuto doprava na už nejvyšší obtížnosti
+let menuPadRight = false;              // drží se doprava na ovladači? (nastavuje pollGamepads)
+const HARDCORE_HOLD_FRAMES = 300;      // ~5 s při 60 fps
+const HARDCORE_VIRUSES = 84;           // brutální počet starostí na startu
+function maxLevel(){ return hardcoreUnlocked ? 6 : 5; }
+function virusesAt(lv){ return lv>=6 ? HARDCORE_VIRUSES : VIRUS_LEVELS[lv-1]; }
+function unlockHardcore(){
+  if(hardcoreUnlocked) return;
+  hardcoreUnlocked=true;
+  level=6;                             // rovnou vyber a zvýrazni novou červenou kuličku
+  rightHoldFrames=0; maxRightPresses=0;
+  audioInit();
+  tone(140,0.30,{type:'sawtooth',vol:0.16,slideTo:70});   // hrozivé „odemykací" zavrčení
+}
+function pollMenuEgg(){
+  if(mode!=='menu'){ rightHoldFrames=0; return; }
+  if(keyHeld['ArrowRight']||keyHeld['KeyD']||menuPadRight){
+    if(++rightHoldFrames>=HARDCORE_HOLD_FRAMES) unlockHardcore();   // držení doprava > 5 s
+  } else rightHoldFrames=0;
+}
+
 // --- Velikonoční vajíčka ---
 const WEDDING = { year:2026, month:8, day:7 };      // svatba 7. srpna 2026 → výročí od 7. 8. 2027
 function anniversaryYears(){                         // >0 = kolikáté výročí dnes je (spustí se od dalšího roku)
@@ -530,14 +554,18 @@ function countSame(g,r,c,dr,dc,color){
 }
 function spawnViruses(g,n){
   let placed=0, att=0;
-  while(placed<n && att<4000){
+  const cap = n*1000 + 4000;                 // hodně starostí (hardcore) → víc pokusů na umístění
+  while(placed<n && att<cap){
     att++;
+    // ve druhé půli pokusů (v praxi jen u přeplněného hardcore) změkči pravidlo:
+    // povol běh délky 3, ale nikdy ne 4 v řadě → žádné okamžité mazání na startu
+    const lim = att > cap*0.5 ? 3 : 2;
     const r = 5 + ((Math.random()*(ROWS-5))|0);
     const c = (Math.random()*COLS)|0;
     const i = I(r,c); if(g[i]) continue;
     const color = randColor();
-    if(countSame(g,r,c,0,-1,color)+countSame(g,r,c,0,1,color) >= 2) continue;
-    if(countSame(g,r,c,-1,0,color)+countSame(g,r,c,1,0,color) >= 2) continue;
+    if(countSame(g,r,c,0,-1,color)+countSame(g,r,c,0,1,color) >= lim) continue;
+    if(countSame(g,r,c,-1,0,color)+countSame(g,r,c,1,0,color) >= lim) continue;
     g[i] = {color, kind:'virus', partner:null};
     placed++;
   }
@@ -653,8 +681,8 @@ function logGame(){
     startedAt: gameStartWall,
     endedAt: Date.now(),
     durationMs,
-    level,                              // 1..5
-    viruses: VIRUS_LEVELS[level-1],     // počet starostí
+    level,                              // 1..5 (6 = hardcore)
+    viruses: virusesAt(level),          // počet starostí
     vsAI: !!players[1].ai,
     winner: winner.side,                // 'L' = ženich, 'R' = nevěsta
     scoreL: players[0].score,
@@ -706,7 +734,9 @@ function aiThink(p){
 
 //================= UPDATE =================
 function startGame(ai){
-  const nv = VIRUS_LEVELS[level-1];
+  if(level!==6) hardcoreUnlocked=false;      // spuštění jiného než hardcore levelu easter egg schová
+  maxRightPresses=0; rightHoldFrames=0;
+  const nv = virusesAt(level);
   players=[newPlayer('L'), newPlayer('R')];
   // Stejná obtížnost → stejné výchozí rozložení starostí pro oba hráče:
   // vygeneruj jedno a zkopíruj do obou mřížek (kopie buněk, ne sdílené reference).
@@ -960,11 +990,19 @@ function drawNext(p, cx){
   drawMini(cx,   y, p.next.cb, s);
 }
 function drawLevelSel(y){
-  const n=5, gap=11, dotsW=(n-1)*gap, x0=168;
+  const n=maxLevel(), gap=11, dotsW=(n-1)*gap, x0=168;   // 6. tečka = odemčený hardcore
   T('STAROSTI', x0-22, y+3, 8, '#cba6ec', 'right');
   for(let i=0;i<n;i++){
+    const hardcore = i===5;                 // poslední kulička je hardcore → červená
+    const on = i<level;
     ctx.beginPath(); ctx.arc(x0+i*gap, y, 3.2, 0, 7);
-    ctx.fillStyle = i<level ? '#f8d77e' : 'rgba(255,255,255,0.20)'; ctx.fill();
+    if(hardcore) ctx.fillStyle = on ? '#ff2a1e' : 'rgba(255,50,30,0.30)';
+    else         ctx.fillStyle = on ? '#f8d77e' : 'rgba(255,255,255,0.20)';
+    ctx.fill();
+    if(hardcore){                           // výrazný červený kroužek kolem hardcore kuličky
+      ctx.strokeStyle = on ? 'rgba(255,60,40,0.95)' : 'rgba(255,60,40,0.45)';
+      ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x0+i*gap, y, 4.8, 0, 7); ctx.stroke();
+    }
   }
   // šipky vertikálně vystředěné na tečky (middle baseline)
   ctx.font='bold 11px "Courier New",monospace';
@@ -972,6 +1010,7 @@ function drawLevelSel(y){
   ctx.fillText('‹', x0-11, y-0.75);
   ctx.fillText('›', x0+dotsW+11, y-0.75);
   ctx.textBaseline='alphabetic';
+  if(level>=6) T('HARDCORE · 84 STAROSTÍ', x0+dotsW/2, y+15, 7, '#ff3a2a', 'center', true);
 }
 
 function drawPlay(hideSide){
@@ -1099,6 +1138,7 @@ function frame(){
   frameCount++;
   pollGamepads();
   pollKeyboard();
+  pollMenuEgg();
   if(mode==='play') update();
   if(mode==='menu') drawMenu();
   else if(mode==='play') drawPlay();
@@ -1135,8 +1175,11 @@ window.addEventListener('keydown', e=>{
     const prevAI=pendingAI, prevLevel=level;
     if(e.code==='KeyW'||e.code==='ArrowUp') pendingAI=false;
     else if(e.code==='KeyS'||e.code==='ArrowDown') pendingAI=true;
-    else if(e.code==='KeyA'||e.code==='ArrowLeft') level=Math.max(1,level-1);
-    else if(e.code==='KeyD'||e.code==='ArrowRight') level=Math.min(5,level+1);
+    else if(e.code==='KeyA'||e.code==='ArrowLeft'){ level=Math.max(1,level-1); maxRightPresses=0; }
+    else if(e.code==='KeyD'||e.code==='ArrowRight'){
+      if(level>=maxLevel()){ if(!e.repeat && ++maxRightPresses>=5) unlockHardcore(); }  // 5× doprava na max obtížnosti
+      else { level=Math.min(maxLevel(),level+1); maxRightPresses=0; }
+    }
     else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') startGame(pendingAI);
     if(pendingAI!==prevAI || level!==prevLevel) Snd.menu();   // změna nastavení = cvaknutí
     return;
@@ -1192,6 +1235,7 @@ function readPad(gp){
 }
 function pollGamepads(){
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  menuPadRight = false;                           // přepočítá se níže (drží se doprava na ovladači?)
   let order = 0;                                 // pořadí připojeného ovladače → hráč (0=ženich, 1=nevěsta)
   for(let i=0;i<pads.length;i++){
     const gp = pads[i]; if(!gp) continue;
@@ -1206,7 +1250,12 @@ function pollGamepads(){
     if(mode==='menu'){
       const prevAI=pendingAI, prevLevel=level;
       if(hit('up')) pendingAI = false; else if(hit('down')) pendingAI = true;
-      if(hit('left')) level = Math.max(1,level-1); else if(hit('right')) level = Math.min(5,level+1);
+      if(hit('left')){ level = Math.max(1,level-1); maxRightPresses=0; }
+      else if(hit('right')){
+        if(level>=maxLevel()){ if(++maxRightPresses>=5) unlockHardcore(); }   // 5× doprava na max obtížnosti
+        else { level = Math.min(maxLevel(),level+1); maxRightPresses=0; }
+      }
+      if(cur.right) menuPadRight = true;          // pro odemčení držením doprava > 5 s
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
