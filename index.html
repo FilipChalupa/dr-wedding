@@ -998,7 +998,7 @@ function drawLevelSel(y){
     const hardcore = i===5;                 // poslední kulička je hardcore → červená
     const on = i<level;
     ctx.beginPath(); ctx.arc(x0+i*gap, y, 3.2, 0, 7);
-    if(hardcore) ctx.fillStyle = on ? '#ff2a1e' : 'rgba(255,50,30,0.30)';
+    if(hardcore) ctx.fillStyle = on ? '#f0863a' : 'rgba(240,130,70,0.30)';
     else         ctx.fillStyle = on ? '#f8d77e' : 'rgba(255,255,255,0.20)';
     ctx.fill();
   }
