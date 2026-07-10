@@ -100,8 +100,9 @@
     display:flex; gap:1.2vh; z-index:20;
   }
   .controls button {
-    font-family:inherit; font-size:1.35vh; font-weight:bold;
-    padding:.55vh 1.3vh; border-radius:.7vh; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; gap:.5ch;
+    font-family:inherit; font-size:1.35vh; font-weight:bold; line-height:1;
+    padding:.6vh 1.3vh; border-radius:.7vh; cursor:pointer;
     color:#e7c98c; border:1px solid #120c06; letter-spacing:.06vh;
     background:linear-gradient(#4a3826,#2a1e13);
     box-shadow:inset 0 1px 0 rgba(255,220,180,.18), 0 1px 0 #120c06;
@@ -148,7 +149,7 @@
     <div class="controls">
       <button id="btnStart">▶ START</button>
       <button id="btnFull">⛶ FULLSCREEN</button>
-      <button id="btnStats">📊 STATISTIKY</button>
+      <button id="btnStats">▁▄█ STATISTIKY</button>
     </div>
     <div class="led"></div>
   </div>
@@ -872,6 +873,29 @@ function drawCell(x,y,cell){
     ctx.fillStyle=p.l; rr(x+2.6,y+2.6,CELL*0.32,CELL*0.32,2); ctx.fill();
   }
 }
+// hrdlo lahve nad tělem sklenice: ramena vyběhnou do úzkého krku, který se nahoře
+// zase mírně rozšíří do lemu (jako v originálním Dr. Mario)
+function drawNeck(x0){
+  const cx=x0+BW/2;
+  const bodyTop=BY;              // horní hrana těla sklenice
+  const shaftTop=bodyTop-6;      // kde krk přechází do lemu
+  const lipTop=shaftTop-3;       // vrchol lemu
+  const neckHalf=CELL*1.15;      // poloviční šířka krku
+  const lipHalf=CELL*1.7;        // poloviční šířka lemu (nahoře širší než krk)
+  const shoulderX=BW*0.30;       // odkud z těla vybíhají ramena ke krku
+  ctx.save();
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(x0+shoulderX, bodyTop);
+  ctx.quadraticCurveTo(cx-neckHalf, bodyTop, cx-neckHalf, shaftTop);   // levé rameno → krk
+  ctx.lineTo(cx-lipHalf, lipTop);                                       // rozšíření do lemu vlevo
+  ctx.lineTo(cx+lipHalf, lipTop);                                       // vrch lemu
+  ctx.lineTo(cx+neckHalf, shaftTop);                                    // rozšíření do lemu vpravo
+  ctx.quadraticCurveTo(cx+neckHalf, bodyTop, x0+BW-shoulderX, bodyTop); // pravé rameno → tělo
+  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2; ctx.stroke();   // vnější sklo
+  ctx.strokeStyle='rgba(150,225,255,0.55)'; ctx.lineWidth=1; ctx.stroke();   // vnitřní cyan (dvojitá linka)
+  ctx.restore();
+}
 function drawBoard(p,x0){
   ctx.fillStyle='#0c1226'; ctx.fillRect(x0,BY,BW,BH);
   ctx.strokeStyle='rgba(255,255,255,0.045)'; ctx.lineWidth=1;
@@ -898,9 +922,7 @@ function drawBoard(p,x0){
   // glass frame
   ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2;
   rr(x0-2.5,BY-1,BW+5,BH+3,3); ctx.stroke();
-  // užší hrdlo lahve — jen nad středem (nad zónou, kam padají kapsle)
-  const neckW=CELL*2.8, neckX=x0+(BW-neckW)/2;
-  ctx.fillStyle='rgba(200,224,255,0.5)'; ctx.fillRect(neckX-2,BY-5,neckW+4,3);
+  drawNeck(x0);   // hrdlo se rozšířeným lemem nad tělem sklenice
   ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(x0+2,BY+2,3,BH-6);
 
   if(p.comboTimer>0){
