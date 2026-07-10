@@ -999,10 +999,6 @@ function drawLevelSel(y){
     if(hardcore) ctx.fillStyle = on ? '#ff2a1e' : 'rgba(255,50,30,0.30)';
     else         ctx.fillStyle = on ? '#f8d77e' : 'rgba(255,255,255,0.20)';
     ctx.fill();
-    if(hardcore){                           // výrazný červený kroužek kolem hardcore kuličky
-      ctx.strokeStyle = on ? 'rgba(255,60,40,0.95)' : 'rgba(255,60,40,0.45)';
-      ctx.lineWidth=1; ctx.beginPath(); ctx.arc(x0+i*gap, y, 4.8, 0, 7); ctx.stroke();
-    }
   }
   // šipky vertikálně vystředěné na tečky (middle baseline)
   ctx.font='bold 11px "Courier New",monospace';
@@ -1010,7 +1006,6 @@ function drawLevelSel(y){
   ctx.fillText('‹', x0-11, y-0.75);
   ctx.fillText('›', x0+dotsW+11, y-0.75);
   ctx.textBaseline='alphabetic';
-  if(level>=6) T('HARDCORE · 84 STAROSTÍ', x0+dotsW/2, y+15, 7, '#ff3a2a', 'center', true);
 }
 
 function drawPlay(hideSide){
