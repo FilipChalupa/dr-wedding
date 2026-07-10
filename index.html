@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Dr. Wedding</title>
 <meta name="description" content="Dr. Wedding — retro svatební duel pro dva (klon Dr. Mario).">
+<meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#241a11">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
@@ -28,7 +29,7 @@
   /* ---- the TV cabinet ---- */
   .tv {
     position:relative;
-    padding:2.6vh 3.4vh 2.4vh 3.4vh;
+    padding:2.6vh 3.4vh 3.2vh 3.4vh;
     border-radius:2.2vh;
     background:linear-gradient(160deg,#5a4632 0%,#3a2c1d 35%,#241a11 100%);
     box-shadow:
@@ -37,7 +38,7 @@
       0 14px 40px rgba(0,0,0,.8),
       0 2px 0 rgba(255,255,255,.05);
     border:2px solid #1a120a;
-    display:flex; flex-direction:column; align-items:center; gap:1.4vh;
+    display:flex; flex-direction:column; align-items:center; gap:3.2vh;
     max-height:100vh;
   }
   .tv::before { /* speaker / detail strip */
@@ -149,7 +150,7 @@
     <div class="controls">
       <button id="btnStart">▶ START</button>
       <button id="btnFull">⛶ FULLSCREEN</button>
-      <button id="btnStats">▁▄█ STATISTIKY</button>
+      <button id="btnStats">▥ STATISTIKY</button>
     </div>
     <div class="led"></div>
   </div>
@@ -630,8 +631,8 @@ function startResolve(p){
 function resolveStep(p){
   if(p.phase==='settle'){
     if(anyCanFall(p.grid)){
-      // padá stejnou rychlostí jako běžná kostička (bez tlačení dolů)
-      if(++p.phaseTimer>=dropIntervalNow()){ p.phaseTimer=0; gravityStep(p.grid); }
+      // kaskáda po smazání padá dvojnásobnou rychlostí než je aktuální gravitace
+      if(++p.phaseTimer>=Math.max(1,dropIntervalNow()/2)){ p.phaseTimer=0; gravityStep(p.grid); }
     } else {
       const {mark,runs}=findClears(p.grid);
       if(mark.size>0){
@@ -873,27 +874,31 @@ function drawCell(x,y,cell){
     ctx.fillStyle=p.l; rr(x+2.6,y+2.6,CELL*0.32,CELL*0.32,2); ctx.fill();
   }
 }
-// hrdlo lahve nad tělem sklenice: ramena vyběhnou do úzkého krku, který se nahoře
-// zase mírně rozšíří do lemu (jako v originálním Dr. Mario)
-function drawNeck(x0){
+// celý obrys sklenice v jednom tahu: boční stěny → ramena → úzký krk → rozšířený lem.
+// Tělo je obdélník s buňkami; tohle je jen sklo navrch, aby hrdlo plynule navazovalo na tělo.
+function drawGlass(x0){
+  const left=x0-2.5, right=x0+BW+2.5, top=BY-1, bottom=BY+BH+2, r=3;
   const cx=x0+BW/2;
-  const bodyTop=BY;              // horní hrana těla sklenice
-  const shaftTop=bodyTop-6;      // kde krk přechází do lemu
-  const lipTop=shaftTop-3;       // vrchol lemu
-  const neckHalf=CELL*1.15;      // poloviční šířka krku
-  const lipHalf=CELL*1.7;        // poloviční šířka lemu (nahoře širší než krk)
-  const shoulderX=BW*0.30;       // odkud z těla vybíhají ramena ke krku
+  const neckHalf=CELL*1.15, lipHalf=CELL*1.7;    // úzký krk × širší lem nahoře
+  const shaftTop=top-7, lipTop=shaftTop-3;
   ctx.save();
   ctx.lineJoin='round'; ctx.lineCap='round';
   ctx.beginPath();
-  ctx.moveTo(x0+shoulderX, bodyTop);
-  ctx.quadraticCurveTo(cx-neckHalf, bodyTop, cx-neckHalf, shaftTop);   // levé rameno → krk
-  ctx.lineTo(cx-lipHalf, lipTop);                                       // rozšíření do lemu vlevo
-  ctx.lineTo(cx+lipHalf, lipTop);                                       // vrch lemu
-  ctx.lineTo(cx+neckHalf, shaftTop);                                    // rozšíření do lemu vpravo
-  ctx.quadraticCurveTo(cx+neckHalf, bodyTop, x0+BW-shoulderX, bodyTop); // pravé rameno → tělo
-  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2; ctx.stroke();   // vnější sklo
-  ctx.strokeStyle='rgba(150,225,255,0.55)'; ctx.lineWidth=1; ctx.stroke();   // vnitřní cyan (dvojitá linka)
+  ctx.moveTo(left, bottom-r);
+  ctx.lineTo(left, top+r);
+  ctx.arcTo(left, top, left+r, top, r);                          // levý horní roh
+  ctx.quadraticCurveTo(cx-neckHalf, top, cx-neckHalf, shaftTop); // levé rameno plynule do krku
+  ctx.lineTo(cx-lipHalf, lipTop);                                 // krk se nahoře rozšíří do lemu
+  ctx.lineTo(cx+lipHalf, lipTop);                                 // vrch lemu
+  ctx.lineTo(cx+neckHalf, shaftTop);
+  ctx.quadraticCurveTo(cx+neckHalf, top, right-r, top);          // pravé rameno zpět do těla
+  ctx.arcTo(right, top, right, top+r, r);                         // pravý horní roh
+  ctx.lineTo(right, bottom-r);
+  ctx.arcTo(right, bottom, right-r, bottom, r);                  // pravý dolní roh
+  ctx.lineTo(left+r, bottom);
+  ctx.arcTo(left, bottom, left, bottom-r, r);                    // levý dolní roh
+  ctx.closePath();
+  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2; ctx.stroke();
   ctx.restore();
 }
 function drawBoard(p,x0){
@@ -919,10 +924,8 @@ function drawBoard(p,x0){
       if(cl.r>=0) drawCell(x0+cl.c*CELL, BY+cl.r*CELL, {color:cl.color,kind:'pill',partner:cl.partner});
     }
   }
-  // glass frame
-  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2;
-  rr(x0-2.5,BY-1,BW+5,BH+3,3); ctx.stroke();
-  drawNeck(x0);   // hrdlo se rozšířeným lemem nad tělem sklenice
+  // glass frame (tělo i hrdlo v jednom obrysu, aby hrdlo navazovalo na sklenici)
+  drawGlass(x0);
   ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.fillRect(x0+2,BY+2,3,BH-6);
 
   if(p.comboTimer>0){
@@ -1056,9 +1059,9 @@ function drawPlay(hideSide){
   if(!hideSide){
     drawGroom(34, BY+BH-2 + bobL + jumpL, 3);
     drawBride(286, BY+BH-2 + bobR + jumpR, 3);
-    // jména pod postavičkami (dřív visela nad sklenicemi)
-    T('ŽENICH',  34,  BY+BH+9, 8, '#cba6ec', 'center', true);
-    T('NEVĚSTA', 286, BY+BH+9, 8, '#f8a8c4', 'center', true);
+    // jména pod postavičkami, na stejné lince jako počet starostí
+    T('ŽENICH',  34,  BY+BH+12, 8, '#cba6ec', 'center', true);
+    T('NEVĚSTA', 286, BY+BH+12, 8, '#f8a8c4', 'center', true);
   }
 
   drawBoard(players[0], LX0);
@@ -1228,9 +1231,9 @@ window.addEventListener('keydown', e=>{
   const p1=players[0], p2=players[1];
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
   switch(e.code){              // pohyb do stran řeší pollKeyboard (DAS)
-    case 'KeyW': if(!e.repeat) rotate(p1); break;
+    case 'KeyW': if(!e.repeat) rotate(p1,-1); break;   // nahoru = po směru hodinových ručiček
     case 'KeyS': if(!e.repeat) p1.softDrop=true; break;
-    case 'ArrowUp':    if(!e.repeat) rotate(pa); e.preventDefault(); break;
+    case 'ArrowUp':    if(!e.repeat) rotate(pa,-1); e.preventDefault(); break;   // nahoru = po směru hodinových ručiček
     case 'ArrowDown':  if(!e.repeat) pa.softDrop=true; e.preventDefault(); break;
     case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
   }
@@ -1256,7 +1259,7 @@ function readPad(gp){
   // Úhlopříčné dvojice se točí stejně: A+Y po směru, B+X proti směru.
   return {
     up, down, left, right,
-    rotCW:  b(0)||b(3)||up,                 // A + Y (a křížek nahoru) = po směru hod. ručiček
+    rotCW:  b(0)||b(3)||up,                 // A + Y + křížek nahoru = po směru hodinových ručiček
     rotCCW: b(1)||b(2),                     // B + X = proti směru
     confirm: b(0)||b(9),                    // A nebo Start
     start:   b(9),                          // Start = pauza
@@ -1296,8 +1299,8 @@ function pollGamepads(){
       let p = players[pIdx];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
       if(!paused && p && !p.ai){
-        if(hit('rotCW'))  rotate(p, 1);    // A / Y → po směru hodinových ručiček
-        if(hit('rotCCW')) rotate(p, -1);   // B / X → proti směru
+        if(hit('rotCW'))  rotate(p, -1);   // A / Y / nahoru → po směru hodinových ručiček
+        if(hit('rotCCW')) rotate(p, 1);    // B / X → proti směru
         // soft drop platí jen pro aktuální blok: zapni na stisk, vypni na puštění
         // (po spawnu se softDrop vynuluje a držený směr ho sám neobnoví — nutný nový stisk)
         if(hit('down')) p.softDrop=true;
