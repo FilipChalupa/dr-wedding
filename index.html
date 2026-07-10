@@ -552,15 +552,16 @@ function countSame(g,r,c,dr,dc,color){
   while(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS&&g[I(rr,cc)]&&g[I(rr,cc)].color===color){ n++; rr+=dr; cc+=dc; }
   return n;
 }
-function spawnViruses(g,n){
+function spawnViruses(g,n,topRow=5){
   let placed=0, att=0;
   const cap = n*1000 + 4000;                 // hodně starostí (hardcore) → víc pokusů na umístění
+  const span = ROWS-topRow;                  // kolik řádků zdola je k dispozici (nahoře zůstává volno)
   while(placed<n && att<cap){
     att++;
     // ve druhé půli pokusů (v praxi jen u přeplněného hardcore) změkči pravidlo:
     // povol běh délky 3, ale nikdy ne 4 v řadě → žádné okamžité mazání na startu
     const lim = att > cap*0.5 ? 3 : 2;
-    const r = 5 + ((Math.random()*(ROWS-5))|0);
+    const r = topRow + ((Math.random()*span)|0);
     const c = (Math.random()*COLS)|0;
     const i = I(r,c); if(g[i]) continue;
     const color = randColor();
@@ -741,7 +742,8 @@ function startGame(ai){
   // Stejná obtížnost → stejné výchozí rozložení starostí pro oba hráče:
   // vygeneruj jedno a zkopíruj do obou mřížek (kopie buněk, ne sdílené reference).
   const template = new Array(COLS*ROWS).fill(null);
-  spawnViruses(template, nv);
+  // hardcore smí sáhnout o řádek výš — volné zůstanou jen první 4 řádky (jinak 5)
+  spawnViruses(template, nv, level>=6 ? 4 : 5);
   for(const p of players){
     for(let i=0;i<template.length;i++) p.grid[i] = template[i] ? {...template[i]} : null;
     p.virusCount=countViruses(p.grid);
