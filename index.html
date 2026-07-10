@@ -341,6 +341,9 @@ let mode = 'menu';        // 'menu' | 'play' | 'over'
 let players = [];
 let winner = null;
 let pendingAI = false;    // false = 2 hráči, true = vs počítač
+// mrkání očí v menu — každý vstup blikne očima „své" postavičky (poznat, kdo koho ovládá)
+let blinkGroom = 0, blinkBride = 0;
+const BLINK_FRAMES = 9;
 let frameCount = 0;
 let level = 3;                          // 1..5 -> počet starostí
 let countdownEnd = 0;                   // čas (ms) konce odpočtu 3·2·1
@@ -967,7 +970,7 @@ function person(cx, feetY, s, draw){
   // r(xLeft, yTop, w, h) : yTop = units above feet of the rect's top edge
   draw(r);
 }
-function drawGroom(cx, feetY, s){
+function drawGroom(cx, feetY, s, blink){
   person(cx,feetY,s,(r)=>{
     // shoes + legs
     r(-5,2,4,2,'#15110a'); r(1,2,4,2,'#15110a');
@@ -986,12 +989,13 @@ function drawGroom(cx, feetY, s){
     // short dark-blonde hair (4 cm)
     r(-7,36,14,3.5,'#8a6b3f');
     r(-7,33,2,3,'#8a6b3f'); r(5,33,2,3,'#8a6b3f');
-    // face (zelené oči)
-    r(-4,30,2,2,'#277a27'); r(2,30,2,2,'#277a27');
+    // face (zelené oči; při mrknutí zavřená víčka)
+    if(blink){ r(-4,29,2,0.8,'#a9805e'); r(2,29,2,0.8,'#a9805e'); }
+    else { r(-4,30,2,2,'#277a27'); r(2,30,2,2,'#277a27'); }
     r(-2.5,27,5,1,'#b56a5a');
   });
 }
-function drawBride(cx, feetY, s){
+function drawBride(cx, feetY, s, blink){
   person(cx,feetY,s,(r)=>{
     // flared white dress
     r(-9,4,18,4,'#f4f0ea');
@@ -1010,8 +1014,9 @@ function drawBride(cx, feetY, s){
     r(-7.5,36,15,4,'#9a7944');
     r(-8,36,2.5,16,'#9a7944'); r(5.5,36,2.5,16,'#9a7944');
     r(-7,35,14,2,'#86683a');
-    // face (modré oči)
-    r(-4,30,2,2,'#2a5dc0'); r(2,30,2,2,'#2a5dc0');
+    // face (modré oči; při mrknutí zavřená víčka)
+    if(blink){ r(-4,29,2,0.8,'#a9805e'); r(2,29,2,0.8,'#a9805e'); }
+    else { r(-4,30,2,2,'#2a5dc0'); r(2,30,2,2,'#2a5dc0'); }
     r(-2,27,4,1,'#cf6f7e');
     r(-5,28,1.5,1.5,'#f0a0a0'); r(3.5,28,1.5,1.5,'#f0a0a0'); // blush
   });
@@ -1143,8 +1148,10 @@ function drawMenu(){
   T('retro svatební duel pro dva', W/2, 68, 9, '#cba6ec', 'center');
 
   const fy=170, bob=Math.sin(frameCount*0.1)*1.5;
-  drawGroom(108, fy+bob, 2.6);
-  drawBride(212, fy-bob, 2.6);
+  if(blinkGroom>0) blinkGroom--;
+  if(blinkBride>0) blinkBride--;
+  drawGroom(108, fy+bob, 2.6, blinkGroom>0);
+  drawBride(212, fy-bob, 2.6, blinkBride>0);
   heart(160, 118+Math.sin(frameCount*0.12)*3, 6, '#ff5d8a');
 
   const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
@@ -1226,6 +1233,9 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyM'){ toggleMute(); return; }   // ztlumit / zapnout zvuk
 
   if(mode==='menu'){
+    // mrknutí očí podle toho, čí klávesa se stiskla (WASD = ženich, šipky = nevěsta)
+    if(e.code[0]==='K' && 'KeyW KeyA KeyS KeyD'.includes(e.code)) blinkGroom=BLINK_FRAMES;
+    else if(e.code.startsWith('Arrow')) blinkBride=BLINK_FRAMES;
     if(e.code==='KeyT'){ audioInit(); Snd.win(); return; }   // DOČASNÉ: přehrát výherní znělku
     const prevAI=pendingAI, prevLevel=level;
     if(e.code==='KeyW'||e.code==='ArrowUp') pendingAI=false;
@@ -1303,6 +1313,10 @@ function pollGamepads(){
 
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
     if(mode==='menu'){
+      // mrknutí očí: 1. připojený ovladač = ženich, 2. = nevěsta (poznat, kdo koho ovládá)
+      if(hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back')){
+        if(pIdx===0) blinkGroom=BLINK_FRAMES; else if(pIdx===1) blinkBride=BLINK_FRAMES;
+      }
       const prevAI=pendingAI, prevLevel=level;
       if(hit('up')) pendingAI = false; else if(hit('down')) pendingAI = true;
       if(hit('left')){ level = Math.max(1,level-1); maxRightPresses=0; }
