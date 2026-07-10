@@ -506,16 +506,31 @@ function gravityStep(g){
       groups.push(grp);
     }
   }
-  const movers=[];
-  for(const grp of groups){
-    let canFall=true;
-    for(const cl of grp){
-      const br=cl.r+1;
-      if(br>=ROWS){ canFall=false; break; }
-      const bi=I(br,cl.c);
-      if(g[bi] && !grp.some(x=>x.i===bi)){ canFall=false; break; }
+  // Které skupiny mohou padat? Skupina padá, pokud je pod každou její buňkou
+  // prázdno, buňka téže skupiny, NEBO buňka jiné skupiny, která taky padá.
+  // (Bez toho by stoh volných kousků padal střídavě a vznikaly by mezi nimi mezery.)
+  const cellGroup=new Map();                       // index buňky → číslo skupiny
+  groups.forEach((grp,gi)=> grp.forEach(cl=> cellGroup.set(cl.i, gi)));
+  const fall=new Array(groups.length).fill(true);
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(let gi=0;gi<groups.length;gi++){
+      if(!fall[gi]) continue;
+      for(const cl of groups[gi]){
+        const br=cl.r+1;
+        if(br>=ROWS){ fall[gi]=false; changed=true; break; }        // podlaha
+        const below=g[I(br,cl.c)];
+        if(below){
+          const bg=cellGroup.get(I(br,cl.c));
+          if(bg===undefined || !fall[bg]){ fall[gi]=false; changed=true; break; } // pevná buňka pod ní (virus / stojící kousek)
+        }
+      }
     }
-    if(canFall) for(const cl of grp) movers.push({obj:g[cl.i], from:cl.i, to:I(cl.r+1,cl.c)});
+  }
+  const movers=[];
+  for(let gi=0;gi<groups.length;gi++){
+    if(fall[gi]) for(const cl of groups[gi]) movers.push({obj:g[cl.i], from:cl.i, to:I(cl.r+1,cl.c)});
   }
   if(movers.length){
     for(const m of movers) g[m.from]=null;
@@ -874,31 +889,39 @@ function drawCell(x,y,cell){
     ctx.fillStyle=p.l; rr(x+2.6,y+2.6,CELL*0.32,CELL*0.32,2); ctx.fill();
   }
 }
-// celý obrys sklenice v jednom tahu: boční stěny → ramena → úzký krk → rozšířený lem.
-// Tělo je obdélník s buňkami; tohle je jen sklo navrch, aby hrdlo plynule navazovalo na tělo.
+// obrys sklenice à la Dr. Mario: svislé stěny → zaoblená ramena → svislý krk →
+// obdélníkový nákružek (lem), který na samém vrcholu vystupuje ven přes krk.
 function drawGlass(x0){
-  const left=x0-2.5, right=x0+BW+2.5, top=BY-1, bottom=BY+BH+2, r=3;
   const cx=x0+BW/2;
-  const neckHalf=CELL*1.15, lipHalf=CELL*1.7;    // úzký krk × širší lem nahoře
-  const shaftTop=top-7, lipTop=shaftTop-3;
+  const bodyHalf=BW/2+2.5;        // vnější hrana stěn těla
+  const neckHalf=CELL*1.5;        // svislý krk
+  const lipHalf=CELL*2;           // lem (širší než krk)
+  const bottom=BY+BH+2, r=3;
+  const bodyTopY=BY-1;            // horní hrana svislých stěn těla
+  const neckBaseY=bodyTopY-7;     // vršek ramene / pata krku
+  const lipBaseY=neckBaseY-3;     // vršek krku / pata lemu
+  const lipTopY=lipBaseY-2;       // vrch lemu
   ctx.save();
   ctx.lineJoin='round'; ctx.lineCap='round';
   ctx.beginPath();
-  ctx.moveTo(left, bottom-r);
-  ctx.lineTo(left, top+r);
-  ctx.arcTo(left, top, left+r, top, r);                          // levý horní roh
-  ctx.quadraticCurveTo(cx-neckHalf, top, cx-neckHalf, shaftTop); // levé rameno plynule do krku
-  ctx.lineTo(cx-lipHalf, lipTop);                                 // krk se nahoře rozšíří do lemu
-  ctx.lineTo(cx+lipHalf, lipTop);                                 // vrch lemu
-  ctx.lineTo(cx+neckHalf, shaftTop);
-  ctx.quadraticCurveTo(cx+neckHalf, top, right-r, top);          // pravé rameno zpět do těla
-  ctx.arcTo(right, top, right, top+r, r);                         // pravý horní roh
-  ctx.lineTo(right, bottom-r);
-  ctx.arcTo(right, bottom, right-r, bottom, r);                  // pravý dolní roh
-  ctx.lineTo(left+r, bottom);
-  ctx.arcTo(left, bottom, left, bottom-r, r);                    // levý dolní roh
+  ctx.moveTo(cx-bodyHalf, bottom-r);
+  ctx.lineTo(cx-bodyHalf, bodyTopY);                                   // levá stěna nahoru
+  ctx.quadraticCurveTo(cx-bodyHalf, neckBaseY, cx-neckHalf, neckBaseY);// zaoblené levé rameno
+  ctx.lineTo(cx-neckHalf, lipBaseY);                                    // krk nahoru
+  ctx.lineTo(cx-lipHalf, lipBaseY);                                     // nákružek ven
+  ctx.lineTo(cx-lipHalf, lipTopY);                                      // nákružek nahoru
+  ctx.lineTo(cx+lipHalf, lipTopY);                                      // vrch nákružku
+  ctx.lineTo(cx+lipHalf, lipBaseY);                                     // nákružek dolů
+  ctx.lineTo(cx+neckHalf, lipBaseY);                                    // nákružek dovnitř
+  ctx.lineTo(cx+neckHalf, neckBaseY);                                   // krk dolů
+  ctx.quadraticCurveTo(cx+bodyHalf, neckBaseY, cx+bodyHalf, bodyTopY);  // zaoblené pravé rameno
+  ctx.lineTo(cx+bodyHalf, bottom-r);                                    // pravá stěna dolů
+  ctx.arcTo(cx+bodyHalf, bottom, cx+bodyHalf-r, bottom, r);            // pravý dolní roh
+  ctx.lineTo(cx-bodyHalf+r, bottom);
+  ctx.arcTo(cx-bodyHalf, bottom, cx-bodyHalf, bottom-r, r);            // levý dolní roh
   ctx.closePath();
-  ctx.strokeStyle='rgba(200,224,255,0.75)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.strokeStyle='rgba(150,205,235,0.8)'; ctx.lineWidth=2.4; ctx.stroke();   // sklo
+  ctx.strokeStyle='rgba(220,245,255,0.9)'; ctx.lineWidth=1; ctx.stroke();     // vnitřní lesk
   ctx.restore();
 }
 function drawBoard(p,x0){
