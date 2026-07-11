@@ -1431,5 +1431,13 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 }
 </script>
+<script>window.addEventListener("load",()=>{setTimeout(()=>{try{
+  level=3; startGame(false); countdownEnd=performance.now()-1; gameStart=performance.now()-1;
+  const p=players[0]; const r0=(p.pill?p.pill.r:"?");
+  prevT=null; tAcc=0;                         // reset akumulátoru a řiď smyčku ručně
+  let tt=1000;
+  for(let i=0;i<190;i++){ tt+=16.67; frame(tt); }   // ~190 snímků po 16.67 ms (~3,2 s)
+  document.title="r0="+r0+" rNow="+(p.pill?("r="+p.pill.r):"none/busy")+" fc="+frameCount+" busyOrPlaced="+(!p.pill);
+}catch(e){document.title="ERR:"+e.message;}},200);});</script>
 </body>
 </html>
