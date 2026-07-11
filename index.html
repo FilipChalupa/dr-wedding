@@ -900,7 +900,8 @@ function drawGlass(x0){
   ctx.lineJoin='miter'; ctx.lineCap='butt';    // hranaté rohy
   ctx.beginPath();
   ctx.moveTo(cx-bodyHalf, bottom-r);
-  ctx.lineTo(cx-bodyHalf, bodyTopY);                     // levá stěna nahoru
+  ctx.lineTo(cx-bodyHalf, bodyTopY+r);                   // levá stěna nahoru
+  ctx.arcTo(cx-bodyHalf, bodyTopY, cx-bodyHalf+r, bodyTopY, r);   // zaoblený levý horní roh
   ctx.lineTo(cx-neckHalf, bodyTopY);                     // vodorovná levá bočnice
   ctx.lineTo(cx-neckHalf, lipBaseY);                     // krk nahoru
   ctx.lineTo(cx-lipHalf, lipBaseY);                      // nákružek ven
@@ -909,7 +910,8 @@ function drawGlass(x0){
   ctx.lineTo(cx+lipHalf, lipBaseY);                      // nákružek dolů
   ctx.lineTo(cx+neckHalf, lipBaseY);                     // nákružek dovnitř
   ctx.lineTo(cx+neckHalf, bodyTopY);                     // krk dolů
-  ctx.lineTo(cx+bodyHalf, bodyTopY);                     // vodorovná pravá bočnice
+  ctx.lineTo(cx+bodyHalf-r, bodyTopY);                   // vodorovná pravá bočnice
+  ctx.arcTo(cx+bodyHalf, bodyTopY, cx+bodyHalf, bodyTopY+r, r);   // zaoblený pravý horní roh
   ctx.lineTo(cx+bodyHalf, bottom-r);                     // pravá stěna dolů
   ctx.arcTo(cx+bodyHalf, bottom, cx+bodyHalf-r, bottom, r);   // pravý dolní roh
   ctx.lineTo(cx-bodyHalf+r, bottom);
