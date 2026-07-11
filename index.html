@@ -315,11 +315,14 @@ function unlockSuper(){
 let flipMode = false;                  // obraz otočený o 180°
 let maxDownPresses = 0;                // kolikrát po sobě dolů, když už je vybráno dolní „VS POČÍTAČ"
 let flipDeadline = 0;                  // v menu se po 10 s nečinnosti zase narovná
-function flipScreen(){
-  flipMode = true; maxDownPresses = 0;
-  flipDeadline = performance.now() + 10000;
-  document.body.classList.add('flip180');
-  audioInit(); tone(300,0.16,{type:'sawtooth',vol:0.13,slideTo:620});   // „převrácení"
+function flipScreen(){                  // stejné gesto obraz převrátí i zase narovná
+  maxDownPresses = 0; audioInit();
+  if(flipMode){ unflip(); tone(620,0.16,{type:'sawtooth',vol:0.13,slideTo:300}); }   // narovnání (sestup)
+  else {
+    flipMode = true; flipDeadline = performance.now() + 10000;
+    document.body.classList.add('flip180');
+    tone(300,0.16,{type:'sawtooth',vol:0.13,slideTo:620});   // převrácení (vzestup)
+  }
 }
 function unflip(){ flipMode=false; document.body.classList.remove('flip180'); }
 
