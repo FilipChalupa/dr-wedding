@@ -60,20 +60,29 @@ const Snd = {
   virus(){  tone(880,0.10,{type:'square',vol:0.10}); tone(1320,0.13,{type:'square',vol:0.07,when:0.06}); },
   combo(n){ for(let i=0;i<3;i++) tone(440*Math.pow(1.26,i+Math.min(n,4)),0.09,{type:'square',vol:0.10,when:i*0.07}); },
   garbage(){ tone(150,0.16,{type:'sawtooth',vol:0.09, slideTo:80}); },
-  attack(n, side){   // dramatická znělka útoku; nevěsta zní výš a jiným témbrem (poznat, kdo posílá)
+  attack(n, side){   // znělka útoku — ženich a nevěsta mají VÝRAZNĚ jinou znělku (poznat, kdo posílá)
     if(muted||!actx) return;
     const t=actx.currentTime+0.02;                  // nepatrný předstih, ať nesplyne se zvukem mazání
-    const bride = side==='R';
-    const mul  = bride ? 4/3 : 1;                    // nevěsta o čistou kvartu výš
-    const lead = bride ? 'square' : 'sawtooth';      // + jiný tvar vlny
-    const notes=[330,392,494,659,784];              // E G B E G — hlasitá vzestupná fanfára
-    const steps=Math.max(3, Math.min(notes.length, 2+n));
-    for(let i=0;i<steps;i++){
-      toneAt(notes[i]*mul,   t+i*0.06, 0.16, {type:lead,     vol:0.20});   // výrazný vedoucí hlas
-      toneAt(notes[i]/2*mul, t+i*0.06, 0.16, {type:'square', vol:0.08});   // spodní oktáva pro tělo
+    const steps=Math.max(3, Math.min(5, 2+n));      // víc smetí = delší
+    if(side==='R'){
+      // NEVĚSTA: jasná, vysoká, třpytivá vzestupná zvonkohra (square + triangle)
+      const notes=[523,659,784,988,1319];           // C5 E5 G5 B5 E6 — svítivý vzestup
+      for(let i=0;i<steps;i++){
+        toneAt(notes[i],   t+i*0.05, 0.14, {type:'square',   vol:0.18});   // vedoucí zvonek
+        toneAt(notes[i]*2, t+i*0.05, 0.10, {type:'triangle', vol:0.06});   // třpyt o oktávu výš
+      }
+      toneAt(notes[steps-1]*1.5, t+steps*0.05, 0.26, {type:'triangle', vol:0.14});  // závěrečný cinkot
+      toneAt(392, t, 0.22, {type:'triangle', vol:0.07});                            // jemný lehký spodek
+    } else {
+      // ŽENICH: těžká, nízká, drsná sestupná fanfára (sawtooth) + úderný bas
+      const notes=[330,262,196,147,110];            // E4 C4 G3 D3 A2 — hrozivý sestup
+      for(let i=0;i<steps;i++){
+        toneAt(notes[i],   t+i*0.07, 0.18, {type:'sawtooth', vol:0.20});   // drsný vedoucí hlas
+        toneAt(notes[i]*2, t+i*0.07, 0.12, {type:'square',   vol:0.06});   // oktáva výš pro tělo
+      }
+      toneAt(73, t, 0.40, {type:'sawtooth', vol:0.20, slideTo:44});                             // úderný basový doraz
+      toneAt(notes[steps-1], t+steps*0.07, 0.34, {type:'sawtooth', vol:0.16, slideTo:notes[steps-1]*0.75});  // závěrečné zavrčení
     }
-    toneAt(98*mul, t, 0.34, {type:'sawtooth', vol:0.18, slideTo:60*mul});          // úderný basový doraz
-    toneAt(notes[steps-1]*2*mul, t+steps*0.06, 0.28, {type:'square', vol:0.16});   // finální vysoký akcent
   },
   count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
   die(){   // krátký smutný sestup při úmrtí — zazní ještě před výherní znělkou
