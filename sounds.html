@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Wedding — Zvuky (test)</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#241a11">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    min-height:100%;
+    background:radial-gradient(circle at 50% 35%, #15151f 0%, #08080c 60%, #000 100%);
+    font-family:'Courier New',monospace; color:#cdc8dd;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap { width:min(96vw,720px); margin:0 auto; padding:4vh 2vh 8vh; }
+  h1 { color:#f8d77e; font-size:clamp(20px,3.2vh,32px); letter-spacing:.2vh;
+    text-align:center; font-style:italic; text-shadow:0 2px 0 #000; }
+  h1 small { display:block; font-style:normal; font-size:clamp(10px,1.5vh,13px);
+    letter-spacing:.3vh; color:#cba6ec; margin-top:.6vh; }
+  .note { text-align:center; color:#8a86a8; font-size:clamp(11px,1.5vh,14px); margin:1.6vh 0 3vh; line-height:1.6; }
+  h2 { color:#f8a8c4; text-transform:uppercase; font-size:clamp(11px,1.5vh,13px);
+    letter-spacing:.1vh; margin:2.6vh 0 1.2vh; border-bottom:1px solid rgba(255,255,255,.08); padding-bottom:.6vh; }
+  .grid { display:flex; flex-wrap:wrap; gap:1vh; }
+  button { font-family:inherit; font-size:clamp(12px,1.7vh,15px); font-weight:bold;
+    padding:1vh 1.6vh; border-radius:1vh; cursor:pointer; color:#1a120a;
+    border:2px solid #1a120a; background:linear-gradient(#f0d79a,#c9a85e);
+    box-shadow:0 2px 0 #1a120a; letter-spacing:.05vh; }
+  button:active { transform:translateY(2px); box-shadow:none; }
+  button.alt { background:linear-gradient(#a6c0f4,#6f8fd8); }
+  button.warm { background:linear-gradient(#f3a0a0,#d87070); }
+  button.ghost { background:linear-gradient(#3a2c1d,#241a11); color:#e7c98c; border-color:#120c06; }
+  .back { display:block; text-align:center; margin-top:4vh; }
+  .back a { color:#7fd0ff; text-decoration:none; font-size:clamp(13px,1.7vh,15px); }
+  .back a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>DR. WEDDING<small>ZVUKY — TESTOVACÍ STRÁNKA</small></h1>
+    <p class="note">Skrytá stránka pro testování zvuků. Sdílí stejný engine
+      (<code>audio.js</code>) jako hra. Klikni na tlačítko a zvuk se přehraje.</p>
+
+    <h2>Hra</h2>
+    <div class="grid" id="gameSnd"></div>
+
+    <h2>Souboj</h2>
+    <div class="grid" id="fightSnd"></div>
+
+    <h2>Odpočet a menu</h2>
+    <div class="grid" id="miscSnd"></div>
+
+    <h2>Konec hry</h2>
+    <div class="grid" id="endSnd"></div>
+
+    <h2>Hudba na pozadí</h2>
+    <div class="grid" id="musicCtl"></div>
+
+    <div class="back"><a href="index.html">← Zpět do hry</a></div>
+  </div>
+
+<script src="audio.js"></script>
+<script>
+// Testovací stránka nezná herní stav, takže hudba smí hrát vždy (výchozí háčky audio.js).
+// audioInit() musí proběhnout po gestu uživatele → voláme ho při každém kliknutí.
+function play(fn){ audioInit(); fn(); }
+function btn(parent, label, fn, cls){
+  const b=document.createElement('button');
+  b.textContent=label; if(cls) b.className=cls;
+  b.addEventListener('click', ()=>play(fn));
+  document.getElementById(parent).appendChild(b);
+}
+
+btn('gameSnd','pohyb',        ()=>Snd.move());
+btn('gameSnd','otočení',      ()=>Snd.rotate());
+btn('gameSnd','položení',     ()=>Snd.lock());
+btn('gameSnd','smazání (1)',  ()=>Snd.clear(1));
+btn('gameSnd','smazání (4)',  ()=>Snd.clear(4));
+btn('gameSnd','starost',      ()=>Snd.virus());
+btn('gameSnd','kombo ×3',     ()=>Snd.combo(3));
+
+btn('fightSnd','smetí',           ()=>Snd.garbage(),'alt');
+btn('fightSnd','útok ženich',     ()=>Snd.attack(3,'L'),'alt');
+btn('fightSnd','útok nevěsta',    ()=>Snd.attack(3,'R'),'alt');
+
+btn('miscSnd','odpočet 3·2·1', ()=>Snd.count(false),'ghost');
+btn('miscSnd','start!',         ()=>Snd.count(true),'ghost');
+btn('miscSnd','cvaknutí menu',  ()=>Snd.menu(),'ghost');
+
+btn('endSnd','úmrtí (smutek)', ()=>Snd.die(),'warm');
+btn('endSnd','výhra (znělka)', ()=>Snd.win());
+
+btn('musicCtl','▶ spustit hudbu', ()=>musicStart(),'ghost');
+btn('musicCtl','■ zastavit hudbu', ()=>musicStop(),'ghost');
+btn('musicCtl','✕ utnout vše',     ()=>stopAllSound(),'warm');
+
+// přepínač zvuku (M) — ať jde testovat i ztlumení
+(function(){
+  const b=document.createElement('button');
+  b.className='ghost';
+  const refresh=()=> b.textContent = muted ? 'M zvuk: VYP' : 'M zvuk: ZAP';
+  refresh();
+  b.addEventListener('click', ()=>{ audioInit(); toggleMute(); refresh(); });
+  document.getElementById('musicCtl').appendChild(b);
+})();
+window.addEventListener('keydown', e=>{ if(e.code==='KeyM'){ audioInit(); toggleMute(); } });
+</script>
+</body>
+</html>
