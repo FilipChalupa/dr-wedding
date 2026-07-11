@@ -294,11 +294,11 @@ const HARDCORE_VIRUSES = 84;           // brutální počet starostí na startu
 // --- „Swap" easter egg (nahoře v menu 5× nahoru): prohození obleku/šatů + útok sám na sebe ---
 let swapMode = false;                  // prohozené oblečení + obrácené útoky; po dohrání se vypne
 let maxUpPresses = 0;                  // kolikrát po sobě nahoru, když už je vybráno horní „DVA HRÁČI"
-function unlockSwap(){
-  if(swapMode) return;
-  swapMode = true; maxUpPresses = 0;
+function toggleSwap(){                 // stejné gesto swap zapne i zase vypne
+  swapMode = !swapMode; maxUpPresses = 0;
   audioInit();
-  tone(660,0.10,{type:'square',vol:0.13}); tone(990,0.12,{type:'square',vol:0.12,when:0.09});   // veselé cinknutí
+  if(swapMode){ tone(660,0.10,{type:'square',vol:0.13}); tone(990,0.12,{type:'square',vol:0.12,when:0.09}); }   // zapnutí (vzestup)
+  else { tone(990,0.10,{type:'square',vol:0.13}); tone(660,0.12,{type:'square',vol:0.12,when:0.09}); }          // vypnutí (sestup)
 }
 function maxLevel(){ return hardcoreUnlocked ? 6 : 5; }
 function virusesAt(lv){ return lv>=6 ? HARDCORE_VIRUSES : VIRUS_LEVELS[lv-1]; }
@@ -1309,7 +1309,7 @@ window.addEventListener('keydown', e=>{
     else if(e.code.startsWith('Arrow')) blinkBride=BLINK_FRAMES;
     const prevAI=pendingAI, prevLevel=level;
     if(e.code==='KeyW'||e.code==='ArrowUp'){
-      if(pendingAI===false){ if(!e.repeat && ++maxUpPresses>=5) unlockSwap(); }   // už nahoře → 5× nahoru = swap egg
+      if(pendingAI===false){ if(!e.repeat && ++maxUpPresses>=5) toggleSwap(); }   // už nahoře → 5× nahoru = přepni swap egg
       else { pendingAI=false; maxUpPresses=0; }
     }
     else if(e.code==='KeyS'||e.code==='ArrowDown'){ pendingAI=true; maxUpPresses=0; }
@@ -1411,7 +1411,7 @@ function pollGamepads(){
       }
       const prevAI=pendingAI, prevLevel=level;
       if(hit('up')){
-        if(pendingAI===false){ if(++maxUpPresses>=5) unlockSwap(); }   // už nahoře → 5× nahoru = swap egg
+        if(pendingAI===false){ if(++maxUpPresses>=5) toggleSwap(); }   // už nahoře → 5× nahoru = přepni swap egg
         else { pendingAI=false; maxUpPresses=0; }
       } else if(hit('down')){ pendingAI = true; maxUpPresses=0; }
       if(hit('left')){ level = Math.max(1,level-1); maxRightPresses=0; }
