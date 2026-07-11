@@ -114,7 +114,8 @@
   :fullscreen.tv, :-webkit-full-screen.tv {
     width:100vw; height:100vh; border-radius:0;
     display:flex; align-items:center; justify-content:center;
-    padding:0; background:#000;
+    /* přebytečnou plochu (jiný poměr stran) vyplň modrým pozadím hry, ne černou */
+    padding:0; background:linear-gradient(#1a2140,#0a0d1c);
   }
   :fullscreen.tv .screen, :-webkit-full-screen.tv .screen {
     width:min(100vw,133.333vh); height:auto;
@@ -124,11 +125,12 @@
   :-webkit-full-screen.tv .controls, :-webkit-full-screen.tv .led, :-webkit-full-screen.tv::before { display:none; }
 
   /* ---- ?tv : kiosk režim pro fyzickou televizi (skryje skříň + tlačítka) ---- */
-  body.tvmode { background:#000; }
+  /* přebytečnou plochu (jiný poměr stran) vyplň modrým pozadím hry, ne černou */
+  body.tvmode { background:linear-gradient(#1a2140,#0a0d1c); }
   body.tvmode .controls { display:none; }
   body.tvmode .tv {
     width:100vw; height:100vh; padding:0; border:0; border-radius:0;
-    background:#000; box-shadow:none;
+    background:linear-gradient(#1a2140,#0a0d1c); box-shadow:none;
     display:flex; align-items:center; justify-content:center;
   }
   body.tvmode .tv::before, body.tvmode .led { display:none; }
