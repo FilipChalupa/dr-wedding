@@ -356,12 +356,14 @@ let paused = false;
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
 const FREEZE_MS = 900;
-// remíza: kdo první doklikal viry, dostane druhý krátké okno na dohrání → pak remíza
+// remíza: kdo první skončí (doklikal viry NEBO umřel), dostane druhý krátké okno →
+// když ho v okně dožene stejným způsobem, je remíza (jinak rozhodne, kdo doklikal)
 let winPending = false;                 // běží okno, ve kterém může druhý dorovnat
-let firstDone = null;                   // hráč, který doklikal viry první
+let firstDone = null;                   // hráč, který skončil první
+let firstOutcome = null;                // jak skončil první: 'win' (doklikal) | 'dead' (umřel)
 let winDeadline = 0;                    // čas (ms), do kdy může druhý stihnout remízu
 let isDraw = false;                     // hra skončila remízou
-const WIN_GRACE_MS = 800;               // délka okna na dorovnání
+const WIN_GRACE_MS = 800;               // délka okna na dorovnání (i doba blikání po smrti)
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
@@ -420,18 +422,28 @@ function newPlayer(side){
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, celebrate:0,
     dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
-    clearedDone:false,          // true = už doklikal všechny viry (aby se to spustilo jen jednou)
+    finishedOutcome:null,       // 'win' | 'dead' — jak hráč skončil (aby se to spustilo jen jednou)
     score:0,
     ai:false, aiPlan:null, aiTimer:0,
   };
 }
-// hráč doklikal všechny viry: první spustí okno na dorovnání, druhý v okně → remíza
-function checkCleared(p){
-  if(p.clearedDone || mode!=='play' || ending) return;
-  if(countViruses(p.grid)!==0) return;
-  p.clearedDone=true;
-  if(!winPending){ winPending=true; firstDone=p; winDeadline=performance.now()+WIN_GRACE_MS; }
-  else if(p!==firstDone) endGame(null,'draw');   // druhý stihl v okně → remíza
+// hráč skončil: 'win' = doklikal všechny viry, 'dead' = zaplácal láhev až nahoru.
+// První skončený spustí okno; když ho druhý v okně dožene stejným koncem → remíza,
+// jinak (jeden doklikal, druhý umřel) vyhrává ten, kdo doklikal.
+function playerFinished(p, outcome){
+  if(p.finishedOutcome || mode!=='play' || ending) return;
+  p.finishedOutcome = outcome;
+  if(outcome==='dead') p.dead = true;            // rozbliká se mu láhev
+  if(!winPending){
+    winPending=true; firstDone=p; firstOutcome=outcome; winDeadline=performance.now()+WIN_GRACE_MS;
+  } else if(p!==firstDone){
+    if(outcome===firstOutcome) endGame(null,'draw');                 // oba stejně → remíza
+    else endGame(outcome==='win' ? p : firstDone, 'win');            // doklikal jen jeden → ten vyhrál
+  }
+}
+function checkCleared(p){                          // došel na 0 virů → doklikáno
+  if(p.finishedOutcome || mode!=='play' || ending) return;
+  if(countViruses(p.grid)===0) playerFinished(p,'win');
 }
 
 function other(p){ return players[0]===p ? players[1] : players[0]; }
@@ -803,7 +815,7 @@ function startGame(ai){
   for(const p of players){ p.pillIdx=0; p.next=pillAt(0); }
   players[1].ai = ai;
   winner=null;
-  winPending=false; firstDone=null; isDraw=false;   // reset stavu remízy
+  winPending=false; firstDone=null; firstOutcome=null; isDraw=false;   // reset stavu remízy
   paused=false;
   ending=false;
   countdownEnd=performance.now()+COUNTDOWN_MS;
@@ -833,7 +845,7 @@ function updatePlayer(p){
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
     p.softDrop=false;            // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
-    if(!canPlace(p.grid,p.pill)){ p.pill=null; endGame(p,'lose'); return; }
+    if(!canPlace(p.grid,p.pill)){ p.pill=null; playerFinished(p,'dead'); return; }
     p.dropTimer=0;
     return;
   }
@@ -868,8 +880,11 @@ function update(){
     if(p.comboTimer>0) p.comboTimer--;
     if(p.animClear>0) p.animClear--;
   }
-  // vypršelo okno na dorovnání → vítězí ten, kdo doklikal první
-  if(winPending && !ending && performance.now()>=winDeadline) endGame(firstDone,'win');
+  // vypršelo okno na dorovnání → rozhodne konec prvního hráče
+  if(winPending && !ending && performance.now()>=winDeadline){
+    if(firstOutcome==='win') endGame(firstDone,'win');        // doklikal → vyhrál
+    else endGame(other(firstDone),'win');                      // umřel → vyhrál soupeř
+  }
 }
 
 //================= RENDER =================
@@ -958,8 +973,8 @@ function drawBoard(p,x0){
   for(let c=1;c<COLS;c++){ ctx.beginPath(); ctx.moveTo(x0+c*CELL,BY); ctx.lineTo(x0+c*CELL,BY+BH); ctx.stroke(); }
   for(let r=1;r<ROWS;r++){ ctx.beginPath(); ctx.moveTo(x0,BY+r*CELL); ctx.lineTo(x0+BW,BY+r*CELL); ctx.stroke(); }
 
-  // úmrtí: obsah láhve bliká (mizí a zase se objeví) — jen během závěrečného zamrznutí
-  const blinkHide = p.dead && ending && (Math.floor(frameCount/6)%2===1);
+  // úmrtí: obsah láhve bliká (mizí a zase se objeví) — během okna na remízu i závěrečného zamrznutí
+  const blinkHide = p.dead && (winPending || ending) && (Math.floor(frameCount/6)%2===1);
   if(!blinkHide) for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const cell=p.grid[I(r,c)];
     if(cell) drawCell(x0+c*CELL, BY+r*CELL, cell);
