@@ -1136,8 +1136,6 @@ function drawMenu(){
   T('retro svatební duel pro dva', W/2, 68, 9, '#cba6ec', 'center');
 
   const fy=170, bob=Math.sin(frameCount*0.1)*1.5;
-  if(blinkGroom>0) blinkGroom--;
-  if(blinkBride>0) blinkBride--;
   drawGroom(108, fy+bob, 2.6, blinkGroom>0);
   drawBride(212, fy-bob, 2.6, blinkBride>0);
   heart(160, 118+Math.sin(frameCount*0.12)*3, 6, '#ff5d8a');
@@ -1195,12 +1193,14 @@ function frame(now){
   let dt=now-prevT; prevT=now;
   if(dt>250) dt=250;                       // po přepnutí tabu apod. nedoháněj tisíce kroků
   tAcc+=dt;
-  pollGamepads();                          // vstup: jednou za snímek
-  pollKeyboard();
   let steps=0;
   while(tAcc>=STEP && steps<6){            // dožeň reálný čas, ale max pár kroků na snímek
     tAcc-=STEP; frameCount++;
-    pollMenuEgg();                         // herní časovač (držení doprava 5 s) běží po krocích
+    pollGamepads();                        // vstup i pohyb do stran (DAS) běží po krocích → konzistentní i při <60 fps
+    pollKeyboard();
+    pollMenuEgg();                         // herní časovač (držení doprava 5 s)
+    if(blinkGroom>0) blinkGroom--;         // mrknutí očí v menu (fps-nezávisle)
+    if(blinkBride>0) blinkBride--;
     if(mode==='play') update();
     steps++;
   }
