@@ -96,6 +96,28 @@
   }
   @keyframes flick { 0%{opacity:.5} 50%{opacity:.9} 100%{opacity:.4} }
 
+  /* zapínací efekt CRT: černo → tenká jasná linka → svislé roztažení + záblesk → obraz */
+  .crton {
+    position:absolute; inset:0; pointer-events:none; z-index:10;
+    background:#04040a; overflow:hidden;
+    animation:crtBlack .9s ease-out forwards;
+  }
+  .crton-beam {
+    position:absolute; left:0; right:0; top:0; height:100%;
+    background:linear-gradient(#bfe8ff,#ffffff 45%,#bfe8ff);
+    transform:scaleY(.012); transform-origin:center;
+    box-shadow:0 0 2vh rgba(200,235,255,.9);
+    animation:crtBeam .9s ease-out forwards;
+  }
+  @keyframes crtBlack { 0%,55%{opacity:1} 100%{opacity:0} }
+  @keyframes crtBeam {
+    0%,20%   { transform:scaleY(.012); opacity:1; }
+    45%      { transform:scaleY(1);    opacity:1; }   /* roztažení + záblesk */
+    62%      { transform:scaleY(1);    opacity:.85; }
+    100%     { transform:scaleY(1);    opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce){ .crton, .crton-beam { animation:none; opacity:0; } }
+
   /* tlačítka přímo na hnědé skříni televize (jen ikonky, kompaktní) */
   .controls {
     display:flex; gap:1.2vh; z-index:20;
@@ -154,6 +176,7 @@
       <div class="scanlines"></div>
       <div class="glow"></div>
       <div class="flicker"></div>
+      <div class="crton"><div class="crton-beam"></div></div>
     </div>
     <div class="controls">
       <button id="btnStart" title="Start / zpět do menu">▶</button>
@@ -246,6 +269,7 @@ let winDeadline = 0;                    // čas (ms), do kdy může druhý stihn
 let isDraw = false;                     // hra skončila remízou
 const WIN_GRACE_MS = 800;               // délka okna na dorovnání (i doba blikání po smrti)
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
+const SQUASH_FRAMES = 7;                // délka dopadového „squash" po položení kapsle
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
@@ -302,7 +326,7 @@ function newPlayer(side){
     dropTimer:0, softDrop:false,
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
-    flashes:[], comboTimer:0, comboN:0, animClear:0,
+    flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null,
     dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
     finishedOutcome:null,       // 'win' | 'dead' — jak hráč skončil (aby se to spustilo jen jednou)
     score:0,
@@ -523,6 +547,8 @@ function rotate(p, dir=1){
 }
 function lock(p){
   const cells=cellsOf(p.pill);
+  // dopadový „squash": zapamatuj právě položené buňky, ať krátce cuknou
+  p.landFx = { set:new Set(cells.filter(cl=>cl.r>=0).map(cl=>I(cl.r,cl.c))), t:SQUASH_FRAMES };
   // část kapsle, která čouhá nad horní hranu, se prostě zahodí (žádná smrt tady);
   // placeInto pokládá jen buňky s r>=0.
   placeInto(p.grid,p.pill);
@@ -831,6 +857,7 @@ function update(){
   for(const p of players){
     if(p.comboTimer>0) p.comboTimer--;
     if(p.animClear>0) p.animClear--;
+    if(p.landFx && --p.landFx.t<=0) p.landFx=null;   // dopadový squash odezní
   }
   // vypršelo okno na dorovnání → rozhodne konec prvního hráče
   if(winPending && !ending && performance.now()>=winDeadline){
@@ -863,14 +890,26 @@ function bgScreen(){
 function drawCell(x,y,cell){
   const p=PAL[cell.color];
   if(cell.kind==='virus'){
+    // živá starost: pohupování, občasné mrknutí a koukání do stran (fáze podle pozice, ať nedělají naráz)
+    const ph = x*13 + y*7;
+    const wob = Math.sin(frameCount*0.08 + ph*0.3)*0.5;        // jemné pohupování
+    const blink = Math.sin(frameCount*0.045 + ph) > 0.95;      // občasné mrknutí
+    const look = Math.round(Math.sin(frameCount*0.03 + ph*0.5))*0.7;   // koukání vlevo/vpravo
+    y += wob;
     ctx.fillStyle=p.d; rr(x+1.5,y+1.5,CELL-3,CELL-3,4); ctx.fill();
     ctx.fillStyle=p.c; rr(x+2.5,y+2.5,CELL-5,CELL-5,3); ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.fillRect(x+CELL*0.28,y+CELL*0.36,2,2.4);
-    ctx.fillRect(x+CELL*0.58,y+CELL*0.36,2,2.4);
-    ctx.fillStyle='#1a0a14';
-    ctx.fillRect(x+CELL*0.30,y+CELL*0.44,1.4,1.4);
-    ctx.fillRect(x+CELL*0.60,y+CELL*0.44,1.4,1.4);
+    if(blink){
+      ctx.fillStyle='#1a0a14';
+      ctx.fillRect(x+CELL*0.28, y+CELL*0.45, 2, 1);            // zavřená víčka (čárky)
+      ctx.fillRect(x+CELL*0.58, y+CELL*0.45, 2, 1);
+    } else {
+      ctx.fillStyle='#fff';
+      ctx.fillRect(x+CELL*0.28,y+CELL*0.36,2,2.4);
+      ctx.fillRect(x+CELL*0.58,y+CELL*0.36,2,2.4);
+      ctx.fillStyle='#1a0a14';
+      ctx.fillRect(x+CELL*0.30+look,y+CELL*0.44,1.4,1.4);      // panenky se dívají do stran
+      ctx.fillRect(x+CELL*0.60+look,y+CELL*0.44,1.4,1.4);
+    }
     ctx.fillStyle='#2a0c1a'; ctx.fillRect(x+CELL*0.34,y+CELL*0.66,CELL*0.34,1.4);
   } else {
     ctx.fillStyle=p.c; rr(x+1,y+1,CELL-2,CELL-2,4); ctx.fill();
@@ -931,7 +970,15 @@ function drawBoard(p,x0){
   const blinkHide = p.dead && (winPending || ending) && (Math.floor(frameCount/6)%2===1);
   if(!blinkHide) for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     const cell=p.grid[I(r,c)];
-    if(cell) drawCell(x0+c*CELL, BY+r*CELL, cell);
+    if(!cell) continue;
+    const cx=x0+c*CELL, cy=BY+r*CELL;
+    if(p.landFx && p.landFx.set.has(I(r,c))){
+      // dopadový squash: krátce zploští a rozšíří, ukotveno u spodní hrany buňky
+      const k=p.landFx.t/SQUASH_FRAMES, ax=cx+CELL/2, ay=cy+CELL;
+      ctx.save(); ctx.translate(ax,ay); ctx.scale(1+0.22*k, 1-0.34*k); ctx.translate(-ax,-ay);
+      drawCell(cx, cy, cell);
+      ctx.restore();
+    } else drawCell(cx, cy, cell);
   }
   // outline tam, kde kousky zmizely (vidět delší dobu)
   for(const f of p.flashes){
@@ -1422,6 +1469,14 @@ const btnMute = document.getElementById('btnMute');
 function updateMuteBtn(){ btnMute.classList.toggle('muted', muted); }
 updateMuteBtn();
 btnMute.addEventListener('click', ()=>{ audioInit(); toggleMute(); updateMuteBtn(); });
+
+// zapínací CRT overlay po doběhnutí schovej (+ pojistka, ať hru nikdy trvale nezakryje)
+(function(){
+  const el=document.querySelector('.crton'); if(!el) return;
+  const hide=()=>{ el.style.display='none'; };
+  el.addEventListener('animationend', hide);
+  setTimeout(hide, 1400);
+})();
 
 //================= INSTALACE (PWA) =================
 // Tlačítko „instalovat" ukaž jen když prohlížeč instalaci nabízí (Chromium přes http(s)/localhost).
