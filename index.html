@@ -1091,9 +1091,12 @@ function drawMini(x,y,color,s){
   ctx.fillStyle=p.l; rr(x+1.5,y+1.5,s*0.34,s*0.34,1.5); ctx.fill();
 }
 function drawNext(p, cx){
-  const s=8, y=20;
-  drawMini(cx-s, y, p.next.ca, s);
-  drawMini(cx,   y, p.next.cb, s);
+  const s=8, y=20, T=s*0.62, O=(s-T)/2, xa=cx-s, xb=cx;
+  drawMini(xa, y, p.next.ca, s);
+  drawMini(xb, y, p.next.cb, s);
+  // spojka přes šev (jako u skutečné kapsle) — každá půlka svou barvou, ať náhled drží pohromadě
+  ctx.fillStyle=PAL[p.next.ca].c; ctx.fillRect(xa+s*0.5, y+O, s*0.5+0.5, T);
+  ctx.fillStyle=PAL[p.next.cb].c; ctx.fillRect(xb-0.5,  y+O, s*0.5+0.5, T);
 }
 function drawLevelSel(y){
   const n=maxLevel(), gap=11, dotsW=(n-1)*gap, x0=168;   // 6. tečka = odemčený hardcore
