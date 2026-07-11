@@ -118,6 +118,9 @@
   }
   @media (prefers-reduced-motion: reduce){ .crton, .crton-beam { animation:none; opacity:0; } }
 
+  /* easter egg „vzhůru nohama": otoč obraz (jen plochu, ne skříň s tlačítky) o 180° */
+  body.flip180 .screen { transform:rotate(180deg); }
+
   /* tlačítka přímo na hnědé skříni televize (jen ikonky, kompaktní) */
   .controls {
     display:flex; gap:1.2vh; z-index:20;
@@ -239,7 +242,7 @@ function togglePause(){
 // předčasné ukončení hry (z pauzy) → zpět do menu, hra se nezapisuje do statistik
 function quitToMenu(){
   paused=false; ending=false;
-  swapMode=false;              // swap egg platí jen pro odehranou hru
+  swapMode=false; unflip();     // eastereggy platí jen pro odehranou hru
   mode='menu';
   musicStop();
 }
@@ -291,6 +294,18 @@ let anyPad = false;                    // je připojen aspoň jeden ovladač? (s
 const HARDCORE_HOLD_FRAMES = 300;      // ~5 s při 60 fps
 const HARDCORE_VIRUSES = 84;           // brutální počet starostí na startu
 
+// --- „Vzhůru nohama" easter egg (dole v menu 5× dolů): obraz otočený o 180° ---
+let flipMode = false;                  // obraz otočený o 180°
+let maxDownPresses = 0;                // kolikrát po sobě dolů, když už je vybráno dolní „VS POČÍTAČ"
+let flipDeadline = 0;                  // v menu se po 10 s nečinnosti zase narovná
+function flipScreen(){
+  flipMode = true; maxDownPresses = 0;
+  flipDeadline = performance.now() + 10000;
+  document.body.classList.add('flip180');
+  audioInit(); tone(300,0.16,{type:'sawtooth',vol:0.13,slideTo:620});   // „převrácení"
+}
+function unflip(){ flipMode=false; document.body.classList.remove('flip180'); }
+
 // --- „Swap" easter egg (nahoře v menu 5× nahoru): prohození obleku/šatů + útok sám na sebe ---
 let swapMode = false;                  // prohozené oblečení + obrácené útoky; po dohrání se vypne
 let maxUpPresses = 0;                  // kolikrát po sobě nahoru, když už je vybráno horní „DVA HRÁČI"
@@ -324,6 +339,7 @@ function unlockHardcore(){
 }
 function pollMenuEgg(){
   if(mode!=='menu'){ rightHoldFrames=0; return; }
+  if(flipMode && performance.now()>=flipDeadline) unflip();   // v menu se obraz po 10 s nečinnosti narovná
   if(keyHeld['ArrowRight']||keyHeld['KeyD']||menuPadRight){
     if(++rightHoldFrames>=HARDCORE_HOLD_FRAMES) unlockHardcore();   // držení doprava > 5 s
   } else rightHoldFrames=0;
@@ -1324,6 +1340,7 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyM'){ toggleMute(); updateMuteBtn(); return; }   // ztlumit / zapnout zvuk
 
   if(mode==='menu'){
+    if(flipMode) flipDeadline=performance.now()+10000;   // vstup v menu → odlož narovnání obrazu
     // mrknutí očí podle toho, čí klávesa se stiskla (WASD = ženich, šipky = nevěsta)
     if(e.code[0]==='K' && 'KeyW KeyA KeyS KeyD'.includes(e.code)) blinkGroom=BLINK_FRAMES;
     else if(e.code.startsWith('Arrow')) blinkBride=BLINK_FRAMES;
@@ -1331,8 +1348,13 @@ window.addEventListener('keydown', e=>{
     if(e.code==='KeyW'||e.code==='ArrowUp'){
       if(pendingAI===false){ if(!e.repeat && ++maxUpPresses>=5) toggleSwap(); }   // už nahoře → 5× nahoru = přepni swap egg
       else { pendingAI=false; maxUpPresses=0; }
+      maxDownPresses=0;
     }
-    else if(e.code==='KeyS'||e.code==='ArrowDown'){ pendingAI=true; maxUpPresses=0; }
+    else if(e.code==='KeyS'||e.code==='ArrowDown'){
+      if(pendingAI===true){ if(!e.repeat && ++maxDownPresses>=5) flipScreen(); }   // už dole → 5× dolů = otoč obraz
+      else { pendingAI=true; maxDownPresses=0; }
+      maxUpPresses=0;
+    }
     else if(e.code==='KeyA'||e.code==='ArrowLeft'){
       if(level<=minLevel()){ if(!e.repeat && ++maxLeftPresses>=5) unlockZero(); }   // už dole → 5× doleva = nultá úroveň
       else { level=Math.max(minLevel(),level-1); maxLeftPresses=0; }
@@ -1348,7 +1370,7 @@ window.addEventListener('keydown', e=>{
     return;
   }
   if(mode==='over'){
-    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); swapMode=false; mode='menu'; }   // ukonči znělku + zruš swap egg
+    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     return;
   }
   // play
@@ -1431,14 +1453,21 @@ function pollGamepads(){
     if(mode==='menu' && hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (jen v menu)
     if(mode==='menu'){
       // mrknutí očí: 1. připojený ovladač = ženich, 2. = nevěsta (poznat, kdo koho ovládá)
-      if(hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back')){
+      const anyHit = hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back');
+      if(anyHit){
         if(pIdx===0) blinkGroom=BLINK_FRAMES; else if(pIdx===1) blinkBride=BLINK_FRAMES;
+        if(flipMode) flipDeadline=performance.now()+10000;   // vstup v menu → odlož narovnání obrazu
       }
       const prevAI=pendingAI, prevLevel=level;
       if(hit('up')){
         if(pendingAI===false){ if(++maxUpPresses>=5) toggleSwap(); }   // už nahoře → 5× nahoru = přepni swap egg
         else { pendingAI=false; maxUpPresses=0; }
-      } else if(hit('down')){ pendingAI = true; maxUpPresses=0; }
+        maxDownPresses=0;
+      } else if(hit('down')){
+        if(pendingAI===true){ if(++maxDownPresses>=5) flipScreen(); }   // už dole → 5× dolů = otoč obraz
+        else { pendingAI=true; maxDownPresses=0; }
+        maxUpPresses=0;
+      }
       if(hit('left')){
         if(level<=minLevel()){ if(++maxLeftPresses>=5) unlockZero(); }   // už dole → 5× doleva = nultá úroveň
         else { level = Math.max(minLevel(),level-1); maxLeftPresses=0; }
@@ -1453,7 +1482,7 @@ function pollGamepads(){
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
-      if(hit('confirm')){ stopAllSound(); swapMode=false; mode='menu'; }   // ukonči znělku + zruš swap egg
+      if(hit('confirm')){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     } else if(mode==='play' && !ending){
       if(hit('start')) togglePause();
       if(paused){ if(hit('back')) quitToMenu(); padPrev[slot]=cur; continue; }   // v pauze: Select = konec
@@ -1510,7 +1539,7 @@ document.addEventListener('webkitfullscreenchange', fitBackground);
 document.getElementById('btnFull').addEventListener('click', ()=>{ audioInit(); toggleFull(); });
 document.getElementById('btnStart').addEventListener('click', ()=>{
   audioInit();
-  if(mode==='menu') startGame(pendingAI); else { musicStop(); stopAllSound(); swapMode=false; mode='menu'; }
+  if(mode==='menu') startGame(pendingAI); else { musicStop(); stopAllSound(); swapMode=false; unflip(); mode='menu'; }
 });
 document.getElementById('btnStats').addEventListener('click', ()=>{
   location.href='stats.html';
