@@ -288,6 +288,7 @@ const WIN_GRACE_MS = 800;               // délka okna na dorovnání (i doba bl
 const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmizení
 const SQUASH_FRAMES = 7;                // délka dopadového „squash" po položení kapsle
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
+const SPAWN_GRACE = 8;                 // snímků po vysazení kapsle, kdy se ještě neuplatní soft drop
 const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, zrychluje skokově.
@@ -386,7 +387,7 @@ function newPlayer(side){
     side,                       // 'L' groom, 'R' bride
     grid:new Array(COLS*ROWS).fill(null),
     pill:null, next:null, pillIdx:0,
-    dropTimer:0, softDrop:false, padDrop:false,   // soft drop zvlášť pro klávesnici a ovladač (ať se nepřebíjejí)
+    dropTimer:0, padDrop:false, spawnGrace:0,   // padDrop = drží se dolů na ovladači; soft drop klávesnice se čte z keyHeld
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null,
@@ -826,7 +827,7 @@ function computeAiPlan(p){
 }
 function aiThink(p){
   if(!p.pill) return;
-  p.softDrop=false; p.padDrop=false;
+  p.padDrop=false;   // AI nikdy nedělá soft drop
   if(!p.aiPlan) p.aiPlan=computeAiPlan(p);
   const pl=p.aiPlan;
   if(p.aiTimer>0){ p.aiTimer--; return; }
@@ -884,6 +885,13 @@ function dropIntervalNow(){
   const steps = Math.floor(sec / DROP_EVERY);
   return Math.max(DROP_MIN, DROP_START - steps*DROP_STEP);
 }
+// drží hráč klávesu „dolů"? (WASD=ženich, šipky=nevěsta; v sólu ovládají šipky člověka=ženicha)
+function humanDownHeld(p){
+  if(p.ai) return false;
+  const solo = players[1].ai;
+  if(p===players[0]) return !!keyHeld['KeyS'] || (solo && !!keyHeld['ArrowDown']);
+  return !solo && !!keyHeld['ArrowDown'];
+}
 function updatePlayer(p){
   if(mode!=='play') return;
   if(winPending && p===firstDone) return;    // už doklikal → zamrzne a čeká, jestli druhý dorovná
@@ -895,13 +903,16 @@ function updatePlayer(p){
     const np=p.next; p.next=pillAt(++p.pillIdx);   // další kapsle ze sdílené sekvence
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
-    p.softDrop=false; p.padDrop=false;   // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
+    p.spawnGrace=SPAWN_GRACE;   // krátká grace, ať nová kapsle při drženém „dolů" hned neproletí
     if(!canPlace(p.grid,p.pill)){ p.pill=null; playerFinished(p,'dead'); return; }
     p.dropTimer=0;
     return;
   }
   if(p.ai) aiThink(p);
-  p.dropTimer += (p.softDrop||p.padDrop) ? 7 : 1;
+  if(p.spawnGrace>0) p.spawnGrace--;
+  // soft drop = drží se „dolů" (klávesnice nebo ovladač); funguje průběžně i pro další kapsle
+  const soft = p.spawnGrace<=0 && (humanDownHeld(p) || p.padDrop);
+  p.dropTimer += soft ? 7 : 1;
   if(p.dropTimer>=dropIntervalNow()){
     p.dropTimer=0;
     const np={...p.pill,r:p.pill.r+1};
@@ -1405,20 +1416,14 @@ window.addEventListener('keydown', e=>{
   }
   const p1=players[0], p2=players[1];
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
+  // soft drop (dolů) se čte průběžně z držené klávesy v updatePlayer; tady jen otočení + zákaz scrollu
   switch(e.code){              // pohyb do stran řeší pollKeyboard (DAS)
     case 'KeyW': if(!e.repeat) rotate(p1,-1); break;   // nahoru = po směru hodinových ručiček
-    case 'KeyS': if(!e.repeat) p1.softDrop=true; break;
     case 'ArrowUp':    if(!e.repeat) rotate(pa,-1); e.preventDefault(); break;   // nahoru = po směru hodinových ručiček
-    case 'ArrowDown':  if(!e.repeat) pa.softDrop=true; e.preventDefault(); break;
-    case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
+    case 'ArrowDown': case 'ArrowLeft': case 'ArrowRight': e.preventDefault(); break;
   }
 });
-window.addEventListener('keyup', e=>{
-  keyHeld[e.code]=false;
-  if(mode!=='play') return;
-  if(e.code==='KeyS') players[0].softDrop=false;
-  if(e.code==='ArrowDown') (players[1].ai?players[0]:players[1]).softDrop=false;
-});
+window.addEventListener('keyup', e=>{ keyHeld[e.code]=false; });   // soft drop se čte z keyHeld v updatePlayer
 
 //================= USB OVLADAČE (Gamepad API) =================
 // Ovladač 0 -> Ženich, ovladač 1 -> Nevěsta. Klávesy WASD/šipky fungují dál.
@@ -1514,10 +1519,7 @@ function pollGamepads(){
       if(!paused && p && !p.ai){
         if(hit('rotCW'))  rotate(p, -1);   // A / Y / nahoru → po směru hodinových ručiček
         if(hit('rotCCW')) rotate(p, 1);    // B / X → proti směru
-        // soft drop platí jen pro aktuální blok: zapni na stisk, vypni na puštění
-        // (po spawnu se softDrop vynuluje a držený směr ho sám neobnoví — nutný nový stisk)
-        if(hit('down')) p.padDrop=true;
-        else if(!cur.down) p.padDrop=false;
+        p.padDrop = cur.down;              // soft drop = drží se dolů (funguje průběžně; grace po spawnu řeší updatePlayer)
         const dir = cur.left ? -1 : cur.right ? 1 : 0;
         const rep = padRepeat[slot] || {dir:0,timer:0};
         if(dir!==0){
