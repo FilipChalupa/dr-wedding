@@ -323,7 +323,7 @@ function newPlayer(side){
     side,                       // 'L' groom, 'R' bride
     grid:new Array(COLS*ROWS).fill(null),
     pill:null, next:null, pillIdx:0,
-    dropTimer:0, softDrop:false,
+    dropTimer:0, softDrop:false, padDrop:false,   // soft drop zvlášť pro klávesnici a ovladač (ať se nepřebíjejí)
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null,
@@ -746,7 +746,7 @@ function aiPlanDeep(p){
 }
 let AIK=6;   // kolik nejlepších 1-ply tahů se zkoumá do hloubky (menší = svižnější, i pro Raspberry Pi)
 function computeAiPlan(p){
-  if(level>=6 && p.next) return aiPlanDeep(p);   // hardcore → chytřejší plánování 2 kapsle dopředu
+  if(p.next) return aiPlanDeep(p);   // chytřejší plánování 2 kapsle dopředu (všechny úrovně)
   let best={score:-1e9, col:(COLS/2|0)-1, orient:0};
   for(let o=0;o<4;o++) for(let c=0;c<COLS;c++){
     let pill={r:0,c,orient:o,ca:p.pill.ca,cb:p.pill.cb};
@@ -763,7 +763,7 @@ function computeAiPlan(p){
 }
 function aiThink(p){
   if(!p.pill) return;
-  p.softDrop=false;
+  p.softDrop=false; p.padDrop=false;
   if(!p.aiPlan) p.aiPlan=computeAiPlan(p);
   const pl=p.aiPlan;
   if(p.aiTimer>0){ p.aiTimer--; return; }
@@ -822,13 +822,13 @@ function updatePlayer(p){
     const np=p.next; p.next=pillAt(++p.pillIdx);   // další kapsle ze sdílené sekvence
     p.pill={r:0, c:(COLS/2|0)-1, orient:0, ca:np.ca, cb:np.cb};
     p.aiPlan=null;
-    p.softDrop=false;            // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
+    p.softDrop=false; p.padDrop=false;   // soft drop platí jen pro předchozí blok — nový vyžaduje nový stisk dolů
     if(!canPlace(p.grid,p.pill)){ p.pill=null; playerFinished(p,'dead'); return; }
     p.dropTimer=0;
     return;
   }
   if(p.ai) aiThink(p);
-  p.dropTimer += p.softDrop ? 7 : 1;
+  p.dropTimer += (p.softDrop||p.padDrop) ? 7 : 1;
   if(p.dropTimer>=dropIntervalNow()){
     p.dropTimer=0;
     const np={...p.pill,r:p.pill.r+1};
@@ -1417,8 +1417,8 @@ function pollGamepads(){
         if(hit('rotCCW')) rotate(p, 1);    // B / X → proti směru
         // soft drop platí jen pro aktuální blok: zapni na stisk, vypni na puštění
         // (po spawnu se softDrop vynuluje a držený směr ho sám neobnoví — nutný nový stisk)
-        if(hit('down')) p.softDrop=true;
-        else if(!cur.down) p.softDrop=false;
+        if(hit('down')) p.padDrop=true;
+        else if(!cur.down) p.padDrop=false;
         const dir = cur.left ? -1 : cur.right ? 1 : 0;
         const rep = padRepeat[slot] || {dir:0,timer:0};
         if(dir!==0){
