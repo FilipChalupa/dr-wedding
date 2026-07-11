@@ -172,3 +172,35 @@ function musicScheduler(){
     music.step = (music.step+1) % M_LEAD.length;
   }
 }
+
+// ================= TICHÁ HUDBA V PAUZE =================
+// Pomalý, měkký a tichý rozklad (jiná nálada než herní hudba) — hraje jen během pauzy.
+const PM_STEP = 0.62;                        // sekundy na krok (klidné tempo)
+const PM_NOTES = [                           // pomalé rozklady (C dur → a moll → F → G), 0 = pauza
+  60,64,67,72, 71,67,
+  57,60,64,69, 67,64,
+  53,57,60,65, 64,60,
+  55,59,62,67, 65,62,
+];
+const PM_BASS = [48, 45, 41, 43];            // basa na začátku každého taktu (6 kroků)
+const pauseMusic = { on:false, step:0, nextTime:0, timer:null };
+function pauseMusicStart(){
+  if(pauseMusic.on || muted || !actx) return;
+  pauseMusic.on=true; pauseMusic.step=0; pauseMusic.nextTime=actx.currentTime+0.15;
+  pauseMusic.timer=setInterval(pauseMusicScheduler, 40);
+}
+function pauseMusicStop(){
+  pauseMusic.on=false;
+  if(pauseMusic.timer){ clearInterval(pauseMusic.timer); pauseMusic.timer=null; }
+}
+function pauseMusicScheduler(){
+  if(!pauseMusic.on) return;
+  if(muted || !actx){ pauseMusicStop(); return; }
+  while(pauseMusic.nextTime < actx.currentTime + 0.3){
+    const s=pauseMusic.step, n=PM_NOTES[s];
+    if(s % 6 === 0) toneAt(midiHz(PM_BASS[(s/6)|0 % PM_BASS.length]), pauseMusic.nextTime, 2.2, {type:'triangle', vol:0.05});  // měkká basa/pad
+    if(n) toneAt(midiHz(n), pauseMusic.nextTime, 1.1, {type:'triangle', vol:0.05});   // tichý rozklad
+    pauseMusic.nextTime += PM_STEP;
+    pauseMusic.step = (s+1) % PM_NOTES.length;
+  }
+}

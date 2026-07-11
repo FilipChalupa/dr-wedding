@@ -238,15 +238,22 @@ musicRateFn = musicRate;
 function togglePause(){
   if(mode!=='play' || ending) return;
   paused=!paused;
-  if(paused){ pausePrev=performance.now(); musicStop(); }
-  else musicStart();
+  if(paused){ pausePrev=performance.now(); musicStop(); pauseMusicStart(); }   // v pauze tichá klidná hudba
+  else { pauseMusicStop(); musicStart(); }
 }
+// auto-pauza při ztrátě fokusu okna — hráč musí sám odpauzovat (P / Start)
+function pauseGame(){
+  if(mode!=='play' || ending || paused) return;
+  paused=true; pausePrev=performance.now(); musicStop(); pauseMusicStart();
+}
+window.addEventListener('blur', pauseGame);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) pauseGame(); });
 // předčasné ukončení hry (z pauzy) → zpět do menu, hra se nezapisuje do statistik
 function quitToMenu(){
   paused=false; ending=false;
   swapMode=false; unflip();     // eastereggy platí jen pro odehranou hru
   mode='menu';
-  musicStop();
+  musicStop(); pauseMusicStop();
 }
 
 //================= GAME STATE =================
@@ -698,7 +705,7 @@ function endGame(p,res){
     winner = (res==='win') ? p : other(p);
     if(res==='lose') p.dead=true;            // p se zaplácal až nahoru → blikne mu celá láhev
   }
-  musicStop();
+  musicStop(); pauseMusicStop();
   Snd.win();
   // krátká oslavná vibrace vítězi (u remízy oběma)
   if(isDraw){ rumble(0,{strong:0.6,weak:0.8,dur:260}); rumble(1,{strong:0.6,weak:0.8,dur:260}); }
@@ -829,6 +836,7 @@ function aiThink(p){
 //================= UPDATE =================
 function startGame(ai){
   if(level<6){ hardcoreUnlocked=false; superUnlocked=false; }   // po normální hře se tvrdé módy zase schovají
+  if(level!==0) zeroUnlocked=false;          // po jiné než nulté hře se nultá úroveň zase znedostupní
   colorCount = level>=7 ? 4 : 3;             // super-hardcore přidá 4. (fialovou) barvu
   maxRightPresses=0; rightHoldFrames=0;
   const nv = virusesAt(level);

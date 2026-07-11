@@ -94,6 +94,8 @@ btn('endSnd','výhra (znělka)', ()=>Snd.win());
 
 btn('musicCtl','▶ spustit hudbu', ()=>musicStart(),'ghost');
 btn('musicCtl','■ zastavit hudbu', ()=>musicStop(),'ghost');
+btn('musicCtl','▶ hudba pauzy',    ()=>pauseMusicStart(),'ghost');
+btn('musicCtl','■ stop pauzy',     ()=>pauseMusicStop(),'ghost');
 btn('musicCtl','✕ utnout vše',     ()=>stopAllSound(),'warm');
 
 // přepínač zvuku (M) — ať jde testovat i ztlumení
