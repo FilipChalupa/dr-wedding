@@ -312,7 +312,7 @@ function newPlayer(side){
 function playerFinished(p, outcome){
   if(p.finishedOutcome || mode!=='play' || ending) return;
   p.finishedOutcome = outcome;
-  if(outcome==='dead'){ p.dead = true; Snd.die(); }   // rozbliká se mu láhev + smutný zvuk (před znělkou vítěze)
+  if(outcome==='dead'){ p.dead = true; Snd.die(); rumble(players.indexOf(p), {strong:1.0, weak:0.9, dur:420}); }   // rozbliká se mu láhev + smutný zvuk + silná vibrace
   if(!winPending){
     winPending=true; firstDone=p; firstOutcome=outcome; winDeadline=performance.now()+WIN_GRACE_MS;
   } else if(p!==firstDone){
@@ -587,12 +587,17 @@ function finishResolve(p){
   // smetí: záleží jen na tom, kolik řad/sloupců hráč v tahu zničil (ne na starostech).
   // Posílá se od DVOU zničených linií výš — tolik kostiček, kolik bylo linií. Jedna linie = nic.
   // Barvy odpovídají zničeným liniím.
+  const pi=players.indexOf(p);
+  // vibrace: smazání starosti/kostiček → jemné cuknutí hráči, který mazal
+  if(p.gainVir>0) rumble(pi, {strong:0.35, weak:0.55, dur:90+p.gainVir*30});
+  else if(p.gainCells>0) rumble(pi, {strong:0.15, weak:0.3, dur:70});
   const garbage = p.gainGarbage.length>=2 ? p.gainGarbage : [];
   if(garbage.length){
     const o=other(p);
     for(const col of garbage){ if(o.pendingGarbage.length<10) o.pendingGarbage.push(col); }
     Snd.attack(garbage.length, p.side);      // dramatická znělka útoku (jinak pro ženicha/nevěstu)
     if(!o.ai) Snd.garbage();                 // soupeř (člověk) slyší příchozí smetí
+    rumble(players.indexOf(o), {strong:0.9, weak:0.7, dur:130+garbage.length*30});   // silnější náraz soupeři (dostal smetí)
   }
   if(p.chains>1){ p.comboTimer=46; p.comboN=p.chains; Snd.combo(p.chains); }
   p.score += p.gainCells*10 + p.gainVir*50;
@@ -613,6 +618,9 @@ function endGame(p,res){
   }
   musicStop();
   Snd.win();
+  // krátká oslavná vibrace vítězi (u remízy oběma)
+  if(isDraw){ rumble(0,{strong:0.6,weak:0.8,dur:260}); rumble(1,{strong:0.6,weak:0.8,dur:260}); }
+  else if(winner) rumble(players.indexOf(winner), {strong:0.7, weak:0.9, dur:320});
   logGame();
 }
 function logGame(){
@@ -1202,6 +1210,21 @@ window.addEventListener('keyup', e=>{
 // Ovladač 0 -> Ženich, ovladač 1 -> Nevěsta. Klávesy WASD/šipky fungují dál.
 const padPrev = {};      // index -> minulý stav (pro detekci stisku)
 const padRepeat = {};    // index -> {dir,timer} pro plynulé držení doleva/doprava
+const playerPads = [];   // pIdx (0=ženich,1=nevěsta) -> slot ovladače (naplní pollGamepads)
+// vibrace ovladače daného hráče — jen pokud to ovladač/prohlížeč podporuje (jinak potichu nic)
+function rumble(pIdx, {strong=0.5, weak=0.5, dur=120}={}){
+  const slot = playerPads[pIdx];
+  if(slot==null) return;
+  const gp = (navigator.getGamepads ? navigator.getGamepads() : [])[slot];
+  if(!gp) return;
+  try{
+    if(gp.vibrationActuator && gp.vibrationActuator.playEffect){
+      gp.vibrationActuator.playEffect('dual-rumble', {startDelay:0, duration:dur, strongMagnitude:strong, weakMagnitude:weak});
+    } else if(gp.hapticActuators && gp.hapticActuators[0] && gp.hapticActuators[0].pulse){
+      gp.hapticActuators[0].pulse(Math.max(strong,weak), dur);
+    }
+  }catch(e){}
+}
 function readPad(gp){
   const b = i => gp.buttons[i] && gp.buttons[i].pressed;
   const ax = gp.axes || [];
@@ -1229,6 +1252,7 @@ function pollGamepads(){
     // protože ovladače nemusí sedět ve slotech 0,1 (mezery / vyšší index → dřív selhal pohyb).
     const slot = (gp.index!=null) ? gp.index : i;
     const pIdx = order++;
+    playerPads[pIdx] = slot;                       // zapamatuj ovladač pro vibrace tohoto hráče
     const cur = readPad(gp), prev = padPrev[slot] || {};
     const hit = k => cur[k] && !prev[k];
 
