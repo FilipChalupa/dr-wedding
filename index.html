@@ -702,7 +702,7 @@ function aiPlanDeep(p){
   if(all.length===0) return {score:-1e18, col:(COLS/2|0)-1, orient:0};
   for(const pl of all) pl.q = countViruses(pl.g)===0 ? 1e9 : aiEval(pl.g);
   all.sort((a,b)=>b.q-a.q);
-  const first = all.slice(0, 12);
+  const first = all.slice(0, AIK);
   let best={score:-1e18, col:first[0].col, orient:first[0].orient};
   for(const pl of first){
     let val;
@@ -716,6 +716,7 @@ function aiPlanDeep(p){
   }
   return best;
 }
+let AIK=6;   // kolik nejlepších 1-ply tahů se zkoumá do hloubky (menší = svižnější, i pro Raspberry Pi)
 function computeAiPlan(p){
   if(level>=6 && p.next) return aiPlanDeep(p);   // hardcore → chytřejší plánování 2 kapsle dopředu
   let best={score:-1e9, col:(COLS/2|0)-1, orient:0};
