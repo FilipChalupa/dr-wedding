@@ -119,7 +119,11 @@
   }
   :fullscreen.tv .screen, :-webkit-full-screen.tv .screen {
     width:min(100vw,133.333vh); height:auto;
-    border-radius:0; box-shadow:inset 0 0 9vh rgba(0,0,0,.95);
+    border-radius:0; box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
+  }
+  /* bez tmavé viněty na okraji, ať se plocha nerozchází s okolními pruhy (jen jemná modrá záře) */
+  :fullscreen.tv .glow, :-webkit-full-screen.tv .glow, body.tvmode .glow {
+    background:radial-gradient(circle at 50% 42%, rgba(120,160,255,.06), transparent 60%);
   }
   :fullscreen.tv .controls, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
   :-webkit-full-screen.tv .controls, :-webkit-full-screen.tv .led, :-webkit-full-screen.tv::before { display:none; }
@@ -137,7 +141,7 @@
   body.tvmode .screen {
     width:min(100vw,133.333vh); height:auto;
     border-radius:0;
-    box-shadow:inset 0 0 9vh rgba(0,0,0,.95), inset 0 0 1.5vh rgba(0,0,0,1);
+    box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
   }
 </style>
 </head>
@@ -1418,6 +1422,24 @@ function toggleFull(){
     (document.exitFullscreen||document.webkitExitFullscreen).call(document);
   }
 }
+// Ve fullscreenu / ?tv režimu slaď pozadí okolo herní plochy s jejím gradientem,
+// aby na jiném poměru stran nevznikl ostrý předěl: nad plochou plná světlá, pod
+// plochou plná tmavá, uvnitř stejný přechod jako v canvasu (#1a2140 → #0a0d1c).
+function fitBackground(){
+  const tv=document.getElementById('tv');
+  const inTV = document.body.classList.contains('tvmode');
+  const inFS = !!(document.fullscreenElement||document.webkitFullscreenElement);
+  if(!inTV && !inFS){ tv.style.background=''; document.body.style.background=''; return; }   // normální režim → nech skříň
+  const sc=document.querySelector('.screen').getBoundingClientRect();
+  const top=Math.max(0,Math.round(sc.top)), bot=Math.round(sc.bottom);
+  const bg='linear-gradient(to bottom, #1a2140 0px, #1a2140 '+top+'px, #0a0d1c '+bot+'px, #0a0d1c 100%)';
+  tv.style.background=bg;
+  document.body.style.background=bg;
+}
+window.addEventListener('resize', fitBackground);
+window.addEventListener('load', fitBackground);
+document.addEventListener('fullscreenchange', fitBackground);
+document.addEventListener('webkitfullscreenchange', fitBackground);
 document.getElementById('btnFull').addEventListener('click', ()=>{ audioInit(); toggleFull(); });
 document.getElementById('btnStart').addEventListener('click', ()=>{
   audioInit();
