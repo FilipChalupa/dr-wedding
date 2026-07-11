@@ -1097,49 +1097,6 @@ function drawMenu(){
   T(muted?'M  ZVUK: VYP':'M  ZVUK: ZAP', W-5, 11, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
 }
 
-// „Just Married" autíčko z profilu (jede doleva → plechovky vlečou vpravo)
-function drawCar(x, baseY){
-  const body='#f4f0ea', trim='#ef5f93', glass='#a6c0f4', tire='#15110a', hub='#8a8a95';
-  // provázek s cinkajícími plechovkami vzadu (vpravo)
-  ctx.strokeStyle='#cdc8dd'; ctx.lineWidth=1;
-  const cans=[];
-  for(let i=0;i<4;i++) cans.push({x:x+32+i*7, y:baseY-1+Math.sin(frameCount*0.3+i)*1.4});
-  ctx.beginPath(); ctx.moveTo(x+28, baseY-6);
-  for(const c of cans) ctx.lineTo(c.x, c.y);
-  ctx.stroke();
-  for(const c of cans){
-    ctx.fillStyle='#c9c9d2'; ctx.fillRect(c.x-1.4, c.y-2, 2.8, 4);
-    ctx.fillStyle='#9a9aa6'; ctx.fillRect(c.x-1.4, c.y-2, 2.8, 1);
-  }
-  // stín pod autem
-  ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(x, baseY+1, 30, 3, 0, 0, 7); ctx.fill();
-  // tělo + kapota vpředu (vlevo)
-  ctx.fillStyle=body; rr(x-30, baseY-14, 60, 11, 4); ctx.fill();
-  rr(x-33, baseY-11, 12, 8, 3); ctx.fill();
-  // kabina
-  ctx.beginPath();
-  ctx.moveTo(x-12, baseY-14); ctx.lineTo(x-6, baseY-23);
-  ctx.lineTo(x+12, baseY-23); ctx.lineTo(x+16, baseY-14);
-  ctx.closePath(); ctx.fill();
-  // okna
-  ctx.fillStyle=glass;
-  ctx.beginPath(); ctx.moveTo(x-8, baseY-15); ctx.lineTo(x-4, baseY-21); ctx.lineTo(x+1, baseY-21); ctx.lineTo(x+1, baseY-15); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x+4, baseY-15); ctx.lineTo(x+4, baseY-21); ctx.lineTo(x+10, baseY-21); ctx.lineTo(x+13, baseY-15); ctx.closePath(); ctx.fill();
-  // růžový pruh + srdíčko na dveřích
-  ctx.fillStyle=trim; ctx.fillRect(x-20, baseY-8, 40, 2);
-  heart(x-1, baseY-9, 3, trim);
-  // kola
-  for(const wx of [x-18, x+16]){
-    ctx.fillStyle=tire; ctx.beginPath(); ctx.arc(wx, baseY-3, 5, 0, 7); ctx.fill();
-    ctx.fillStyle=hub;  ctx.beginPath(); ctx.arc(wx, baseY-3, 2, 0, 7); ctx.fill();
-  }
-  // cedule JUST MARRIED na dvou tyčkách nad kabinou
-  ctx.fillStyle='#8a6b3f'; ctx.fillRect(x-17, baseY-30, 1.4, 8); ctx.fillRect(x+15, baseY-30, 1.4, 8);
-  ctx.fillStyle='#fffef8'; rr(x-22, baseY-37, 44, 9, 2); ctx.fill();
-  ctx.strokeStyle=trim; ctx.lineWidth=1; rr(x-22, baseY-37, 44, 9, 2); ctx.stroke();
-  T('JUST MARRIED', x, baseY-30.5, 6, '#d0447a', 'center', true);
-}
-
 function drawOver(){
   drawPlay(true);
   ctx.fillStyle='rgba(6,8,20,0.82)'; ctx.fillRect(0,0,W,H);
@@ -1166,10 +1123,6 @@ function drawOver(){
     T('🏆 VÍTĚZ: '+wname, W/2, 210, 11, '#f8d77e', 'center', true);
   }
   if(frameCount%50<32) T('hrát znovu', W/2, 228, 9, '#ffffff', 'center');
-
-  // Just Married autíčko přejíždí zprava doleva ve smyčce s pauzou (v popředí scény)
-  const CAR_CYCLE=440, ct=frameCount%CAR_CYCLE, carX=W+42 - ct*1.7;
-  if(carX > -70) drawCar(carX, 196);
 }
 
 //================= LOOP =================
