@@ -858,7 +858,7 @@ function updatePlayer(p){
   }
 }
 function update(){
-  if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; } return; }
+  if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; winPending=false; } return; }   // výsledek → přestat blikat
   if(paused){
     // pauza zmrazí čas: posuň časové kotvy, aby „zbývající" odpočet i náběh rychlosti stály
     const t=performance.now(), dt=t-pausePrev; pausePrev=t;
@@ -1230,8 +1230,7 @@ function drawOver(){
   heart(160, 108, 7, frameCount%30<15?'#ff5d8a':'#ef5f93');
 
   if(isDraw){
-    drawCrown(138, fy - 3.2*37.5, 1.3); drawCrown(182, fy - 3.2*37.5, 1.3);   // korunka oběma
-    T('— REMÍZA —', W/2, 210, 12, '#f8d77e', 'center', true);
+    T('— REMÍZA —', W/2, 210, 12, '#f8d77e', 'center', true);   // remíza → korunku nikdo
   } else {
     const wc = winner.side==='L' ? 138 : 182;
     drawCrown(wc, fy - 3.2*37.5, 1.3);
