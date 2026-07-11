@@ -300,8 +300,20 @@ function toggleSwap(){                 // stejné gesto swap zapne i zase vypne
   if(swapMode){ tone(660,0.10,{type:'square',vol:0.13}); tone(990,0.12,{type:'square',vol:0.12,when:0.09}); }   // zapnutí (vzestup)
   else { tone(990,0.10,{type:'square',vol:0.13}); tone(660,0.12,{type:'square',vol:0.12,when:0.09}); }          // vypnutí (sestup)
 }
+// --- „Nultá úroveň" easter egg (dole v menu 5× doleva): 1 starost, všechny pilulky jedné barvy ---
+let zeroUnlocked = false;              // odemčena nultá úroveň (žádná tečka nesvítí)
+let maxLeftPresses = 0;                // kolikrát po sobě doleva, když už je nejnižší úroveň
+let pillColorLock = null;              // v nulté úrovni: barva, na kterou jsou uzamčené všechny pilulky
+function minLevel(){ return zeroUnlocked ? 0 : 1; }
+function unlockZero(){
+  if(zeroUnlocked) return;
+  zeroUnlocked = true;
+  level = 0; maxLeftPresses = 0;
+  audioInit();
+  tone(392,0.10,{type:'triangle',vol:0.12}); tone(523,0.12,{type:'triangle',vol:0.12,when:0.09});   // jemné „snadné" cinknutí
+}
 function maxLevel(){ return hardcoreUnlocked ? 6 : 5; }
-function virusesAt(lv){ return lv>=6 ? HARDCORE_VIRUSES : VIRUS_LEVELS[lv-1]; }
+function virusesAt(lv){ return lv<=0 ? 1 : lv>=6 ? HARDCORE_VIRUSES : VIRUS_LEVELS[lv-1]; }
 function unlockHardcore(){
   if(hardcoreUnlocked) return;
   hardcoreUnlocked=true;
@@ -327,7 +339,7 @@ function anniversaryYears(){                         // >0 = kolikáté výroč�
 }
 
 function randColor(){ return COLORS[(Math.random()*3)|0]; }
-function randPill(){ return {ca:randColor(), cb:randColor()}; }
+function randPill(){ return pillColorLock ? {ca:pillColorLock, cb:pillColorLock} : {ca:randColor(), cb:randColor()}; }
 // Sdílená sekvence kapslí — oba hráči dostávají kapsle ve stejném pořadí
 // (každý si drží svůj index podle toho, kolik už jich spotřeboval).
 let pillSeq = [];
@@ -797,8 +809,16 @@ function startGame(ai){
   // Stejná obtížnost → stejné výchozí rozložení starostí pro oba hráče:
   // vygeneruj jedno a zkopíruj do obou mřížek (kopie buněk, ne sdílené reference).
   const template = new Array(COLS*ROWS).fill(null);
-  // hardcore smí sáhnout o řádek výš — volné zůstanou jen první 4 řádky (jinak 5)
-  spawnViruses(template, nv, level>=6 ? 4 : 5);
+  if(level<=0){
+    // nultá úroveň: jediná starost a všechny pilulky té samé barvy (triviální)
+    pillColorLock = randColor();
+    const r = 5 + ((Math.random()*(ROWS-5))|0), c = (Math.random()*COLS)|0;
+    template[I(r,c)] = {color:pillColorLock, kind:'virus', partner:null};
+  } else {
+    pillColorLock = null;
+    // hardcore smí sáhnout o řádek výš — volné zůstanou jen první 4 řádky (jinak 5)
+    spawnViruses(template, nv, level>=6 ? 4 : 5);
+  }
   for(const p of players){
     for(let i=0;i<template.length;i++) p.grid[i] = template[i] ? {...template[i]} : null;
     p.virusCount=countViruses(p.grid);
@@ -1313,10 +1333,15 @@ window.addEventListener('keydown', e=>{
       else { pendingAI=false; maxUpPresses=0; }
     }
     else if(e.code==='KeyS'||e.code==='ArrowDown'){ pendingAI=true; maxUpPresses=0; }
-    else if(e.code==='KeyA'||e.code==='ArrowLeft'){ level=Math.max(1,level-1); maxRightPresses=0; }
+    else if(e.code==='KeyA'||e.code==='ArrowLeft'){
+      if(level<=minLevel()){ if(!e.repeat && ++maxLeftPresses>=5) unlockZero(); }   // už dole → 5× doleva = nultá úroveň
+      else { level=Math.max(minLevel(),level-1); maxLeftPresses=0; }
+      maxRightPresses=0;
+    }
     else if(e.code==='KeyD'||e.code==='ArrowRight'){
       if(level>=maxLevel()){ if(!e.repeat && ++maxRightPresses>=5) unlockHardcore(); }  // 5× doprava na max obtížnosti
       else { level=Math.min(maxLevel(),level+1); maxRightPresses=0; }
+      maxLeftPresses=0;
     }
     else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') startGame(pendingAI);
     if(pendingAI!==prevAI || level!==prevLevel) Snd.menu();   // změna nastavení = cvaknutí
@@ -1414,10 +1439,15 @@ function pollGamepads(){
         if(pendingAI===false){ if(++maxUpPresses>=5) toggleSwap(); }   // už nahoře → 5× nahoru = přepni swap egg
         else { pendingAI=false; maxUpPresses=0; }
       } else if(hit('down')){ pendingAI = true; maxUpPresses=0; }
-      if(hit('left')){ level = Math.max(1,level-1); maxRightPresses=0; }
+      if(hit('left')){
+        if(level<=minLevel()){ if(++maxLeftPresses>=5) unlockZero(); }   // už dole → 5× doleva = nultá úroveň
+        else { level = Math.max(minLevel(),level-1); maxLeftPresses=0; }
+        maxRightPresses=0;
+      }
       else if(hit('right')){
         if(level>=maxLevel()){ if(++maxRightPresses>=5) unlockHardcore(); }   // 5× doprava na max obtížnosti
         else { level = Math.min(maxLevel(),level+1); maxRightPresses=0; }
+        maxLeftPresses=0;
       }
       if(cur.right) menuPadRight = true;          // pro odemčení držením doprava > 5 s
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
