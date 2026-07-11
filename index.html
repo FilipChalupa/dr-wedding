@@ -96,20 +96,22 @@
   }
   @keyframes flick { 0%{opacity:.5} 50%{opacity:.9} 100%{opacity:.4} }
 
-  /* tlačítka přímo na hnědé skříni televize (zjednodušená, tmavá) */
+  /* tlačítka přímo na hnědé skříni televize (jen ikonky, kompaktní) */
   .controls {
     display:flex; gap:1.2vh; z-index:20;
   }
   .controls button {
-    display:inline-flex; align-items:center; justify-content:center; gap:.5ch;
-    font-family:inherit; font-size:1.35vh; font-weight:bold; line-height:1;
-    padding:.6vh 1.3vh; border-radius:.7vh; cursor:pointer;
-    color:#e7c98c; border:1px solid #120c06; letter-spacing:.06vh;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:inherit; font-size:1.9vh; font-weight:bold; line-height:1;
+    padding:.5vh .9vh; min-width:3.6vh; border-radius:.7vh; cursor:pointer;
+    color:#e7c98c; border:1px solid #120c06;
     background:linear-gradient(#4a3826,#2a1e13);
     box-shadow:inset 0 1px 0 rgba(255,220,180,.18), 0 1px 0 #120c06;
     text-shadow:0 1px 0 #000;
   }
   .controls button:active { transform:translateY(1px); box-shadow:inset 0 1px 2px #000; }
+  .controls button.muted { opacity:.5; text-decoration:line-through; }   /* zvuk vypnutý */
+  .controls button[hidden] { display:none; }   /* jinak by display:inline-flex přebil atribut hidden */
 
   :fullscreen.tv, :-webkit-full-screen.tv {
     width:100vw; height:100vh; border-radius:0;
@@ -154,10 +156,11 @@
       <div class="flicker"></div>
     </div>
     <div class="controls">
-      <button id="btnStart">▶ START</button>
-      <button id="btnFull">⛶ FULLSCREEN</button>
-      <button id="btnStats">▥ STATISTIKY</button>
-      <button id="btnInstall" hidden>⤓ INSTALOVAT</button>
+      <button id="btnStart" title="Start / zpět do menu">▶</button>
+      <button id="btnFull" title="Celá obrazovka">⛶</button>
+      <button id="btnMute" title="Zvuk zap/vyp">♪</button>
+      <button id="btnStats" title="Statistiky">▥</button>
+      <button id="btnInstall" title="Nainstalovat" hidden>⤓</button>
     </div>
     <div class="led"></div>
   </div>
@@ -255,6 +258,7 @@ let hardcoreUnlocked = false;          // jen v paměti → po reloadu stránky 
 let rightHoldFrames = 0;               // jak dlouho se v menu drží doprava (odemče po 5 s)
 let maxRightPresses = 0;               // kolikrát po sobě zmáčknuto doprava na už nejvyšší obtížnosti
 let menuPadRight = false;              // drží se doprava na ovladači? (nastavuje pollGamepads)
+let anyPad = false;                    // je připojen aspoň jeden ovladač? (skryje klávesové nápovědy)
 const HARDCORE_HOLD_FRAMES = 300;      // ~5 s při 60 fps
 const HARDCORE_VIRUSES = 84;           // brutální počet starostí na startu
 function maxLevel(){ return hardcoreUnlocked ? 6 : 5; }
@@ -1107,8 +1111,8 @@ function drawPlay(hideSide){
   if(mode==='play' && paused){
     ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
     T('PAUZA', W/2, H/2-6, 28, '#f8d77e', 'center', true);
-    T('P / START · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
-    T('Q / SELECT · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
+    T((anyPad?'START':'P')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
+    T((anyPad?'SELECT':'Q')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
   }
 }
 
@@ -1134,7 +1138,7 @@ function drawMenu(){
 
   T('DR. WEDDING', W/2, 50, 24, '#f8d77e', 'center', true);
   heart(W/2-92, 40, 6, '#ef5f93'); heart(W/2+92, 40, 6, '#ef5f93');
-  T('retro svatební duel pro dva', W/2, 68, 9, '#cba6ec', 'center');
+  T('retro svatební duel', W/2, 68, 9, '#cba6ec', 'center');
 
   const fy=170, bob=Math.sin(frameCount*0.1)*1.5;
   drawGroom(108, fy+bob, 2.6, blinkGroom>0);
@@ -1153,7 +1157,8 @@ function drawMenu(){
   if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
 
   // indikátor zvuku (přepíná se klávesou M)
-  T(muted?'M  ZVUK: VYP':'M  ZVUK: ZAP', W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');   // dál od kraje kvůli CRT ořezu
+  // „M " je klávesová zkratka → skryj ji, když je připojen ovladač
+  T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
 }
 
 function drawOver(){
@@ -1233,7 +1238,7 @@ window.addEventListener('keydown', e=>{
   keyHeld[e.code]=true;
   audioInit();                                  // jakákoli klávesa = gesto → rozběhni/obnov zvuk
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
-  if(e.code==='KeyM'){ toggleMute(); return; }   // ztlumit / zapnout zvuk
+  if(e.code==='KeyM'){ toggleMute(); updateMuteBtn(); return; }   // ztlumit / zapnout zvuk
 
   if(mode==='menu'){
     // mrknutí očí podle toho, čí klávesa se stiskla (WASD = ženich, šipky = nevěsta)
@@ -1317,6 +1322,7 @@ function readPad(gp){
 }
 function pollGamepads(){
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  anyPad = false; for(let i=0;i<pads.length;i++) if(pads[i]){ anyPad=true; break; }   // připojen aspoň jeden ovladač?
   menuPadRight = false;                           // přepočítá se níže (drží se doprava na ovladači?)
   let order = 0;                                 // pořadí připojeného ovladače → hráč (0=ženich, 1=nevěsta)
   for(let i=0;i<pads.length;i++){
@@ -1408,6 +1414,10 @@ document.getElementById('btnStart').addEventListener('click', ()=>{
 document.getElementById('btnStats').addEventListener('click', ()=>{
   location.href='stats.html';
 });
+const btnMute = document.getElementById('btnMute');
+function updateMuteBtn(){ btnMute.classList.toggle('muted', muted); }
+updateMuteBtn();
+btnMute.addEventListener('click', ()=>{ audioInit(); toggleMute(); updateMuteBtn(); });
 
 //================= INSTALACE (PWA) =================
 // Tlačítko „instalovat" ukaž jen když prohlížeč instalaci nabízí (Chromium přes http(s)/localhost).
