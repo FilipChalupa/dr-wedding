@@ -194,6 +194,7 @@ const I = (r,c)=> r*COLS+c;
 // Retro pípání generované za běhu. Ztlumení klávesou M (uloží se do localStorage).
 let actx = null;
 let muted = false;
+let activeVoices = [];   // aktuálně znějící/naplánované tóny — aby šly naráz zastavit (např. výherní znělka při návratu do menu)
 try{ muted = localStorage.getItem('drwedding-muted')==='1'; }catch(e){}
 function audioInit(){
   // AudioContext lze vytvořit/rozběhnout až po gestu uživatele (klávesa/tlačítko)
@@ -219,6 +220,22 @@ function toneAt(freq, t0, dur, {type='square', vol=0.14, attack=0.005, slideTo=n
   g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
   o.connect(g).connect(actx.destination);
   o.start(t0); o.stop(t0+dur+0.03);
+  const v={o,g}; activeVoices.push(v);
+  o.onended=()=>{ const i=activeVoices.indexOf(v); if(i>=0) activeVoices.splice(i,1); };
+}
+// okamžitě (s krátkým doztlumením proti lupnutí) zastav všechny znějící tóny
+function stopAllSound(){
+  if(!actx) return;
+  const now=actx.currentTime;
+  for(const v of activeVoices){
+    try{
+      v.g.gain.cancelScheduledValues(now);
+      v.g.gain.setValueAtTime(Math.max(0.0001, v.g.gain.value), now);
+      v.g.gain.linearRampToValueAtTime(0.0001, now+0.04);
+      v.o.stop(now+0.06);
+    }catch(e){}
+  }
+  activeVoices=[];
 }
 function tone(freq, dur, opts={}){ if(!actx) return; toneAt(freq, actx.currentTime+(opts.when||0), dur, opts); }
 const Snd = {
@@ -1308,7 +1325,7 @@ window.addEventListener('keydown', e=>{
     return;
   }
   if(mode==='over'){
-    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space') mode='menu';
+    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); mode='menu'; }   // ukonči i výherní znělku
     return;
   }
   // play
@@ -1386,7 +1403,7 @@ function pollGamepads(){
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
-      if(hit('confirm')) mode='menu';
+      if(hit('confirm')){ stopAllSound(); mode='menu'; }   // ukonči i výherní znělku
     } else if(mode==='play' && !ending){
       if(hit('start')) togglePause();
       if(paused){ if(hit('back')) quitToMenu(); padPrev[slot]=cur; continue; }   // v pauze: Select = konec
@@ -1443,7 +1460,7 @@ document.addEventListener('webkitfullscreenchange', fitBackground);
 document.getElementById('btnFull').addEventListener('click', ()=>{ audioInit(); toggleFull(); });
 document.getElementById('btnStart').addEventListener('click', ()=>{
   audioInit();
-  if(mode==='menu') startGame(pendingAI); else { musicStop(); mode='menu'; }
+  if(mode==='menu') startGame(pendingAI); else { musicStop(); stopAllSound(); mode='menu'; }
 });
 document.getElementById('btnStats').addEventListener('click', ()=>{
   location.href='stats.html';
