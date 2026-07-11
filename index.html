@@ -1157,8 +1157,8 @@ function drawMenu(){
   if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
 
   // indikátor zvuku (přepíná se klávesou M)
-  // zkratka pro ztlumení: s ovladačem „L1", jinak klávesa „M"
-  T((anyPad?'L1 ':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
+  // „M " je klávesová zkratka → skryj ji, když je připojen ovladač
+  T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
 }
 
 function drawOver(){
@@ -1337,7 +1337,7 @@ function pollGamepads(){
     const hit = k => cur[k] && !prev[k];
 
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
-    if(hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (v jakémkoli režimu)
+    if(mode==='menu' && hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (jen v menu)
     if(mode==='menu'){
       // mrknutí očí: 1. připojený ovladač = ženich, 2. = nevěsta (poznat, kdo koho ovládá)
       if(hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back')){
