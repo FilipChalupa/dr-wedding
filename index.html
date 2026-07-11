@@ -157,6 +157,7 @@
       <button id="btnStart">▶ START</button>
       <button id="btnFull">⛶ FULLSCREEN</button>
       <button id="btnStats">▥ STATISTIKY</button>
+      <button id="btnInstall" hidden>⤓ INSTALOVAT</button>
     </div>
     <div class="led"></div>
   </div>
@@ -1407,6 +1408,25 @@ document.getElementById('btnStart').addEventListener('click', ()=>{
 document.getElementById('btnStats').addEventListener('click', ()=>{
   location.href='stats.html';
 });
+
+//================= INSTALACE (PWA) =================
+// Tlačítko „instalovat" ukaž jen když prohlížeč instalaci nabízí (Chromium přes http(s)/localhost).
+// Přes file:// ani v prohlížečích bez podpory se tlačítko neukáže (zůstane skryté).
+let deferredInstall = null;
+const btnInstall = document.getElementById('btnInstall');
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();               // nech si vlastní tlačítko místo lišty prohlížeče
+  deferredInstall = e;
+  btnInstall.hidden = false;
+});
+btnInstall.addEventListener('click', async ()=>{
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  try{ await deferredInstall.userChoice; }catch(e){}
+  deferredInstall = null;
+  btnInstall.hidden = true;         // instalační výzvu lze použít jen jednou
+});
+window.addEventListener('appinstalled', ()=>{ deferredInstall=null; btnInstall.hidden=true; });
 
 //================= STATISTIKY (localStorage) =================
 // localStorage funguje spolehlivě i přes file:// (na rozdíl od IndexedDB).
