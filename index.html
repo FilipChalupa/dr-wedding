@@ -1215,7 +1215,7 @@ function drawMenu(){
 function drawOver(){
   drawPlay(true);
   ctx.fillStyle='rgba(6,8,20,0.82)'; ctx.fillRect(0,0,W,H);
-  T(isDraw ? 'OBA SEZDÁNI!' : 'PRÁVĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
+  T('ŠŤASTNĚ SEZDÁNI!', W/2, 40, 20, '#f8d77e', 'center', true);
 
   for(let i=0;i<8;i++){
     const a=(frameCount*0.02 + i);
