@@ -563,9 +563,13 @@ function resolveStep(p){
         p.chains++; p.gainCells+=mark.size;
         const vBefore=p.gainVir;
         p.gainVir += clearMarked(p.grid, mark);     // kousky zmizí hned
-        if(p.gainVir>vBefore){                      // zmizela nějaká starost
+        const vGained=p.gainVir-vBefore;            // starosti zničené tímto krokem
+        if(vGained>0){                              // zmizela nějaká starost
           p.virusCount=countViruses(p.grid);        // → ihned sniž počítadlo dole (nečekej na konec kaskády)
+          rumble(players.indexOf(p), {strong:0.4, weak:0.6, dur:100+vGained*40});   // IHNED zavibruj při zničení starosti
           if(p.virusCount===0) checkCleared(p);     // doklikáno → vítěz / okno na remízu
+        } else {
+          rumble(players.indexOf(p), {strong:0.15, weak:0.3, dur:60});             // jen smazané kostičky
         }
         // posbírej barvy všech zničených řad/sloupců za celý tah;
         // finishResolve pak podle jejich počtu (od dvou výš) pošle smetí soupeři
@@ -587,10 +591,7 @@ function finishResolve(p){
   // smetí: záleží jen na tom, kolik řad/sloupců hráč v tahu zničil (ne na starostech).
   // Posílá se od DVOU zničených linií výš — tolik kostiček, kolik bylo linií. Jedna linie = nic.
   // Barvy odpovídají zničeným liniím.
-  const pi=players.indexOf(p);
-  // vibrace: smazání starosti/kostiček → jemné cuknutí hráči, který mazal
-  if(p.gainVir>0) rumble(pi, {strong:0.35, weak:0.55, dur:90+p.gainVir*30});
-  else if(p.gainCells>0) rumble(pi, {strong:0.15, weak:0.3, dur:70});
+  // (vibrace za zničení starostí/kostiček řeší resolveStep hned, ne až tady na konci kaskády)
   const garbage = p.gainGarbage.length>=2 ? p.gainGarbage : [];
   if(garbage.length){
     const o=other(p);

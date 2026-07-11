@@ -131,26 +131,17 @@ const Snd = {
 // Veselá svatební progrese v C dur (8 taktů), basa + arpeggio + melodie.
 function midiHz(m){ return 440*Math.pow(2,(m-69)/12); }
 const M_TEMPO = 116;                         // BPM (osminové kroky)
-const M_PROG = [                             // 8 taktů po 8 krocích = 64 kroků smyčka (~16,5 s)
+const M_PROG = [                             // 4 takty po 8 krocích = 32 kroků smyčka
   {bass:36, ch:[60,64,67]},                  // C dur
   {bass:41, ch:[60,65,69]},                  // F dur
   {bass:45, ch:[57,60,64]},                  // a moll
-  {bass:43, ch:[59,62,67]},                  // G dur
-  {bass:36, ch:[60,64,67]},                  // C dur
-  {bass:45, ch:[57,60,64]},                  // a moll
-  {bass:41, ch:[60,65,69]},                  // F dur
   {bass:43, ch:[59,62,67]},                  // G dur
 ];
-const M_LEAD = [                             // melodie (osminy, 0 = pauza) — 8 taktů
+const M_LEAD = [                             // melodie (osminy, 0 = pauza)
   72,0,71,72, 76,0,74,72,
   77,0,76,74, 72,0,69, 0,
   72,0,76,79, 77,0,76,74,
   74,0,72,71, 67,0,72, 0,
-  // druhá polovina (takty 5–8)
-  72,0,76,79, 76,0,72,74,
-  76,0,72,69, 72,0,74, 0,
-  77,0,81,79, 77,0,74,72,
-  74,0,71,74, 67,0,72, 0,
 ];
 const music = { on:false, step:0, nextTime:0, timer:null };
 let musicShouldPlay = () => true;            // háček: kdy smí hudba hrát (index → jen ve hře, mimo pauzu)
