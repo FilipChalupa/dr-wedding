@@ -827,9 +827,10 @@ function computeAiPlan(p){
 }
 function aiThink(p){
   if(!p.pill) return;
-  p.padDrop=false;   // AI nikdy nedělá soft drop
   if(!p.aiPlan) p.aiPlan=computeAiPlan(p);
   const pl=p.aiPlan;
+  // jakmile je kapsle na cíli (sloupec i otočení), rychle ji polož (soft drop); jinak padá normálně
+  p.padDrop = (p.pill.orient===pl.orient && p.pill.c===pl.col);
   if(p.aiTimer>0){ p.aiTimer--; return; }
   p.aiTimer = level>=6 ? 2 : 4;                 // v hardcore reaguje rychleji, ať stihne dojet na cíl
   if(p.pill.orient!==pl.orient) rotate(p);
