@@ -211,13 +211,13 @@ const COLS = 8, ROWS = 16, CELL = 10;          // jako originální Dr. Mario
 const LX0 = 70, RX0 = 170, BY = 46;            // board top-left positions
 const BW = COLS*CELL, BH = ROWS*CELL;
 
-const COLORS = ['P','G','R','V'];            // V = růžová, 4. barva jen v super-hardcore
+const COLORS = ['P','G','R','V'];            // V = zelená, 4. barva jen v super-hardcore
 let colorCount = 3;                          // kolik barev je aktivních (3, nebo 4 v super-hardcore)
 const PAL = {                                // originální Dr. Mario barvy
   P:{c:'#4f7be8',l:'#a6c0f4',d:'#2a4496'},   // modrá
   G:{c:'#f0c83a',l:'#f8e07e',d:'#aa8512'},   // žlutá
   R:{c:'#e84b4b',l:'#f3a0a0',d:'#9e2222'},   // červená
-  V:{c:'#ef5f93',l:'#f8a8c4',d:'#a5285e'},   // růžová (4. barva super-hardcore)
+  V:{c:'#3fc463',l:'#8ee6a4',d:'#1f7a3c'},   // zelená (4. barva super-hardcore)
 };
 const DIR = {U:[-1,0],D:[1,0],L:[0,-1],R:[0,1]};
 const OPP = {U:'D',D:'U',L:'R',R:'L'};
@@ -303,7 +303,7 @@ let menuPadRight = false;              // drží se doprava na ovladači? (nasta
 let anyPad = false;                    // je připojen aspoň jeden ovladač? (skryje klávesové nápovědy)
 const HARDCORE_HOLD_FRAMES = 300;      // ~5 s při 60 fps
 const HARDCORE_VIRUSES = 84;           // brutální počet starostí na startu
-let superUnlocked = false;             // super-hardcore (level 7): 84 starostí + 4. růžová barva
+let superUnlocked = false;             // super-hardcore (level 7): 84 starostí + 4. zelená barva
 function unlockSuper(){
   if(superUnlocked) return;
   superUnlocked = true;
@@ -842,7 +842,7 @@ function aiThink(p){
 function startGame(ai){
   if(level<6){ hardcoreUnlocked=false; superUnlocked=false; }   // po normální hře se tvrdé módy zase schovají
   if(level!==0) zeroUnlocked=false;          // po jiné než nulté hře se nultá úroveň zase znedostupní
-  colorCount = level>=7 ? 4 : 3;             // super-hardcore přidá 4. (růžovou) barvu
+  colorCount = level>=7 ? 4 : 3;             // super-hardcore přidá 4. (zelenou) barvu
   maxRightPresses=0; rightHoldFrames=0;
   const nv = virusesAt(level);
   players=[newPlayer('L'), newPlayer('R')];
@@ -1184,7 +1184,7 @@ function drawLevelSel(y){
     const hardcore = i===5, superH = i===6;   // 6. = hardcore (oranžová), 7. = super-hardcore (fialová)
     const on = i<level;
     ctx.beginPath(); ctx.arc(x0+i*gap, y, 3.2, 0, 7);
-    if(superH)        ctx.fillStyle = on ? '#ef5f93' : 'rgba(239,95,147,0.30)';
+    if(superH)        ctx.fillStyle = on ? '#3fc463' : 'rgba(63,196,99,0.30)';
     else if(hardcore) ctx.fillStyle = on ? '#f0863a' : 'rgba(240,130,70,0.30)';
     else              ctx.fillStyle = on ? '#f8d77e' : 'rgba(255,255,255,0.20)';
     ctx.fill();
