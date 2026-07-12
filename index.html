@@ -173,6 +173,51 @@
     border-radius:0;
     box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
   }
+
+  /* ==== Overlay statistik (sdílí vzhled se stats.html, ovládá se gamepadem) ==== */
+  #statsOverlay {
+    position:fixed; inset:0; z-index:60; display:none; overflow-y:auto; overflow-x:hidden;
+    background:radial-gradient(circle at 50% 35%, #15151f 0%, #08080c 60%, #000 100%);
+    font-family:'Courier New',monospace; color:#cdc8dd; -webkit-text-size-adjust:100%;
+  }
+  #statsOverlay.open { display:block; }
+  #statsOverlay .stats { width:min(96vw,860px); margin:0 auto; padding:4vh 2vh 2vh; }
+  #statsOverlay h1 { color:#f8d77e; font-size:clamp(20px,3.4vh,34px); letter-spacing:.25vh;
+    text-align:center; font-style:italic; text-shadow:0 2px 0 #000; }
+  #statsOverlay h1 small { display:block; font-style:normal; font-size:clamp(10px,1.5vh,14px); letter-spacing:.4vh;
+    color:#cba6ec; margin-top:.6vh; }
+  #statsOverlay .nav { display:flex; align-items:center; justify-content:center; gap:1.6vh; margin:3vh 0 1vh; flex-wrap:wrap; }
+  #statsOverlay button { font-family:inherit; font-size:clamp(12px,1.7vh,16px); font-weight:bold;
+    padding:.8vh 1.6vh; border-radius:1vh; color:#1a120a;
+    border:2px solid #1a120a; background:linear-gradient(#f0d79a,#c9a85e); box-shadow:0 2px 0 #1a120a; }
+  #statsOverlay button:disabled { opacity:.3; box-shadow:0 2px 0 #1a120a; transform:none; }
+  #statsOverlay .day { color:#cba6ec; font-size:clamp(13px,2vh,20px); text-align:center; font-weight:bold; min-width:38vw; }
+  #statsOverlay .pageno { text-align:center; color:#6f6a8a; font-size:clamp(10px,1.4vh,13px); margin-bottom:2.4vh; }
+  #statsOverlay .sum { text-align:center; color:#9a95ad; font-size:clamp(12px,1.6vh,15px); margin-bottom:2.6vh; line-height:1.7; }
+  #statsOverlay .sum b { color:#e7e0ff; }
+  #statsOverlay table { width:100%; border-collapse:collapse; font-size:clamp(12px,1.7vh,16px); font-variant-numeric:tabular-nums; }
+  #statsOverlay th, #statsOverlay td { padding:1vh .8vh; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; }
+  #statsOverlay th { color:#f8a8c4; text-transform:uppercase; font-size:clamp(10px,1.3vh,12px); letter-spacing:.1vh; }
+  #statsOverlay .win-L { color:#cba6ec; font-weight:bold; }
+  #statsOverlay .win-R { color:#f8a8c4; font-weight:bold; }
+  #statsOverlay .dur, #statsOverlay .vir { text-align:right; white-space:nowrap; }
+  #statsOverlay .score { white-space:nowrap; }
+  #statsOverlay .score .sL { display:inline-block; min-width:4ch; text-align:right; }
+  #statsOverlay .score .sR { display:inline-block; min-width:4ch; text-align:left; }
+  #statsOverlay .empty { text-align:center; color:#9a95ad; margin:8vh 0; font-size:clamp(14px,1.9vh,18px); line-height:1.8; }
+  #statsOverlay .overall { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+    border-radius:1.2vh; padding:2.4vh 2vh 2vh; margin:2.5vh 0 1vh; text-align:center; }
+  #statsOverlay .overall .big { display:flex; justify-content:center; align-items:flex-end; gap:clamp(20px,5vw,56px);
+    flex-wrap:wrap; margin-bottom:1.6vh; }
+  #statsOverlay .overall .v { font-size:clamp(22px,4vh,40px); font-weight:bold; display:block; line-height:1; }
+  #statsOverlay .overall .v.total { color:#f8d77e; }
+  #statsOverlay .overall .l { font-size:clamp(10px,1.3vh,12px); color:#9a95ad; text-transform:uppercase; letter-spacing:.1vh; }
+  #statsOverlay .overall .meta { color:#9a95ad; font-size:clamp(12px,1.6vh,15px); line-height:1.7; }
+  #statsOverlay .overall .meta b { color:#e7e0ff; }
+  #statsHint { position:sticky; bottom:0; text-align:center; padding:1.6vh 2vh 2vh;
+    font-size:clamp(11px,1.6vh,15px); color:#8a86a8;
+    background:linear-gradient(to top, #08080c 55%, rgba(8,8,12,0)); }
+  #statsHint b { color:#f0d79a; }
 </style>
 </head>
 <body>
@@ -194,7 +239,14 @@
     <div class="led"></div>
   </div>
 
+  <!-- Statistiky jako overlay (kiosk / ovladače): otevírá se ze hry, ne přes samostatnou stránku -->
+  <div id="statsOverlay" aria-hidden="true">
+    <div class="stats" id="statsInner"></div>
+    <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>A / Start</b> zpět do hry</div>
+  </div>
+
 <script src="audio.js"></script>
+<script src="statsview.js"></script>
 <script>
 //================= SETUP =================
 // ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
@@ -257,7 +309,7 @@ function quitToMenu(){
 }
 
 //================= GAME STATE =================
-let mode = 'menu';        // 'menu' | 'play' | 'over'
+let mode = 'menu';        // 'menu' | 'play' | 'over' | 'stats'
 let players = [];
 let winner = null;
 let pendingAI = false;    // false = 2 hráči, true = vs počítač
@@ -1291,6 +1343,8 @@ function drawMenu(){
   // indikátor zvuku (přepíná se klávesou M)
   // „M " je klávesová zkratka → skryj ji, když je připojen ovladač
   T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
+  // Statistiky jsou skryté (easter egg): na ovladači skryté kombo (drž Select + Start),
+  // na klávesnici Tab. V menu se záměrně nenabízejí, aby na ně běžný host nenarazil.
 }
 
 function drawOver(){
@@ -1346,7 +1400,8 @@ function frame(now){
   }
   if(mode==='menu') drawMenu();
   else if(mode==='play') drawPlay();
-  else drawOver();
+  else if(mode==='over') drawOver();
+  // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -1375,6 +1430,7 @@ window.addEventListener('keydown', e=>{
   if(e.code==='KeyM'){ toggleMute(); updateMuteBtn(); return; }   // ztlumit / zapnout zvuk
 
   if(mode==='menu'){
+    if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky
     if(flipMode) flipDeadline=performance.now()+10000;   // vstup v menu → odlož narovnání obrazu
     // mrknutí očí podle toho, čí klávesa se stiskla (WASD = ženich, šipky = nevěsta)
     if(e.code[0]==='K' && 'KeyW KeyA KeyS KeyD'.includes(e.code)) blinkGroom=BLINK_FRAMES;
@@ -1406,6 +1462,14 @@ window.addEventListener('keydown', e=>{
   }
   if(mode==='over'){
     if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
+    return;
+  }
+  if(mode==='stats'){
+    if(e.code==='ArrowRight'||e.code==='KeyD') statsNext();
+    else if(e.code==='ArrowLeft'||e.code==='KeyA') statsPrev();
+    else if(e.code==='ArrowUp'||e.code==='KeyW') statsScroll(-40);
+    else if(e.code==='ArrowDown'||e.code==='KeyS') statsScroll(40);
+    else if(e.code==='Escape'||e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'||e.code==='Tab'){ e.preventDefault(); closeStats(); }
     return;
   }
   // play
@@ -1481,6 +1545,7 @@ function pollGamepads(){
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
     if(mode==='menu' && hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (jen v menu)
     if(mode==='menu'){
+      if(cur.back && hit('start')){ openStats(); padPrev[slot]=cur; continue; }   // skryté kombo: drž Select + zmáčkni Start = statistiky
       // mrknutí očí: 1. připojený ovladač = ženich, 2. = nevěsta (poznat, kdo koho ovládá)
       const anyHit = hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back');
       if(anyHit){
@@ -1512,6 +1577,11 @@ function pollGamepads(){
       if(hit('confirm')) startGame(pendingAI);
     } else if(mode==='over'){
       if(hit('confirm')){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
+    } else if(mode==='stats'){
+      if(hit('confirm')||hit('start')||hit('back')) closeStats();   // A / Start / Select = zpět do hry
+      else if(hit('right')) statsNext();                            // starší den
+      else if(hit('left'))  statsPrev();                            // novější den
+      if(cur.up) statsScroll(-14); if(cur.down) statsScroll(14);    // držení = plynulé rolování
     } else if(mode==='play' && !ending){
       if(hit('start')) togglePause();
       if(paused){ if(hit('back')) quitToMenu(); padPrev[slot]=cur; continue; }   // v pauze: Select = konec
@@ -1568,7 +1638,8 @@ document.getElementById('btnStart').addEventListener('click', ()=>{
   if(mode==='menu') startGame(pendingAI); else { musicStop(); stopAllSound(); swapMode=false; unflip(); mode='menu'; }
 });
 document.getElementById('btnStats').addEventListener('click', ()=>{
-  location.href='stats.html';
+  audioInit();
+  if(mode==='stats') closeStats(); else openStats();
 });
 const btnMute = document.getElementById('btnMute');
 function updateMuteBtn(){ btnMute.classList.toggle('muted', muted); }
@@ -1617,7 +1688,23 @@ function saveGame(rec){
     localStorage.setItem(STORE_KEY, JSON.stringify(all));
   }catch(e){ console.warn('Statistiku se nepodařilo uložit:',e); }
 }
-// Zobrazení statistik je v samostatné stránce stats.html (čte stejný localStorage).
+// Statistiky lze zobrazit jako overlay přímo ve hře (kiosk / ovladače) i na samostatné
+// stránce stats.html — obojí vykresluje sdílený statsview.js.
+let statsCtl = null;
+const statsOverlay = document.getElementById('statsOverlay');
+function openStats(){
+  if(mode!=='menu') return;                 // otevírá se jen z menu
+  statsCtl = StatsView.mount(document.getElementById('statsInner'), {standalone:false});   // čerstvě z localStorage
+  statsOverlay.classList.add('open'); statsOverlay.scrollTop=0;
+  mode='stats'; audioInit(); Snd.menu();
+}
+function closeStats(){
+  statsOverlay.classList.remove('open'); statsCtl=null;
+  mode='menu'; Snd.menu();
+}
+function statsNext(){ if(statsCtl) statsCtl.next(); }      // ← na obrazovce „Starší ›" (starší den)
+function statsPrev(){ if(statsCtl) statsCtl.prev(); }      // ← „‹ Novější" (novější den)
+function statsScroll(dy){ statsOverlay.scrollTop += dy; }
 
 //================= OFFLINE (service worker) =================
 // Registrace SW pro offline provoz (network first, cache fallback). Funguje jen přes http(s).

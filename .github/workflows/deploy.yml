@@ -28,7 +28,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html stats.html sounds.html audio.js sw.js \
+          cp index.html stats.html sounds.html audio.js statsview.js sw.js \
              manifest.webmanifest icon.svg CNAME _site/
 
       - uses: actions/configure-pages@v5
