@@ -391,6 +391,7 @@ function toggleSwap(){                 // stejné gesto swap zapne i zase vypne
 // --- „Nultá úroveň" easter egg (dole v menu 5× doleva): 1 starost, všechny pilulky jedné barvy ---
 let zeroUnlocked = false;              // odemčena nultá úroveň (žádná tečka nesvítí)
 let maxLeftPresses = 0;                // kolikrát po sobě doleva, když už je nejnižší úroveň
+let statsComboPresses = 0;             // skryté statistiky: kolikrát po sobě Start při držení Selectu (5× = otevřít)
 let pillColorLock = null;              // v nulté úrovni: barva, na kterou jsou uzamčené všechny pilulky
 function minLevel(){ return zeroUnlocked ? 0 : 1; }
 function unlockZero(){
@@ -1343,7 +1344,7 @@ function drawMenu(){
   // indikátor zvuku (přepíná se klávesou M)
   // „M " je klávesová zkratka → skryj ji, když je připojen ovladač
   T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
-  // Statistiky jsou skryté (easter egg): na ovladači skryté kombo (drž Select + Start),
+  // Statistiky jsou skryté (easter egg): na ovladači drž Select a 5× zmáčkni Start,
   // na klávesnici Tab. V menu se záměrně nenabízejí, aby na ně běžný host nenarazil.
 }
 
@@ -1545,7 +1546,14 @@ function pollGamepads(){
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
     if(mode==='menu' && hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (jen v menu)
     if(mode==='menu'){
-      if(cur.back && hit('start')){ openStats(); padPrev[slot]=cur; continue; }   // skryté kombo: drž Select + zmáčkni Start = statistiky
+      // skryté kombo: drž Select a 5× po sobě zmáčkni Start → statistiky (aby to nikdo neudělal omylem)
+      if(cur.back && hit('start')){
+        audioInit();
+        if(++statsComboPresses>=5){ statsComboPresses=0; openStats(); }
+        else Snd.menu();                                 // cvaknutí 1..4 = host slyší, že se počítá
+        padPrev[slot]=cur; continue;                     // Start přitom nespustí hru
+      }
+      if(!cur.back && prev.back) statsComboPresses=0;     // uvolnění Selectu = reset (musí být 5× vcelku)
       // mrknutí očí: 1. připojený ovladač = ženich, 2. = nevěsta (poznat, kdo koho ovládá)
       const anyHit = hit('up')||hit('down')||hit('left')||hit('right')||hit('confirm')||hit('start')||hit('rotCW')||hit('rotCCW')||hit('back');
       if(anyHit){
