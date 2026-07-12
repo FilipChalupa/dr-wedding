@@ -76,13 +76,29 @@ zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 Každá dohraná hra se automaticky ukládá do prohlížeče (localStorage) — kdy začala, jak
 dlouho trvala, obtížnost (počet starostí), režim (dva hráči / vs počítač) a kdo vyhrál.
 
-Statistiky si zobrazíš tlačítkem **📊 STATISTIKY** pod televizí, nebo otevřením
-samostatné stránky [`stats.html`](stats.html).
+Statistiky si zobrazíš třemi způsoby:
+
+- tlačítkem **📊 STATISTIKY** pod televizí (mimo režim `?tv`),
+- **skrytým ovladačovým kombem přímo ve hře** (viz níže) — jediná cesta na fyzické
+  televizi v režimu `?tv`, kde tlačítka nejsou,
+- otevřením samostatné stránky [`stats.html`](stats.html).
 
 Nahoře je **celkový souhrn** napříč všemi dny (kolikrát vyhrál ženich/nevěsta, počet her,
 celkový a nejdelší čas). Níže jsou hry seskupené **po dnech** — šipkami *Novější / Starší*
-listuješ mezi dny; u každého dne je denní souhrn a tabulka her se skóre. Dole je tlačítko
-**🗑 Vymazat statistiky** (s potvrzením).
+listuješ mezi dny; u každého dne je denní souhrn a tabulka her se skóre. Na samostatné
+stránce `stats.html` je dole i tlačítko **🗑 Vymazat statistiky** (s potvrzením); herní
+překryv ho záměrně nemá, aby na svatbě nešlo statistiky omylem smazat.
+
+### Skryté combo pro statistiky (kiosk)
+
+Aby na statistiky běžný host nenarazil, otevírají se v menu **skrytým kombem**:
+
+- **Ovladač:** podrž **`Select`** a **5× po sobě** zmáčkni **`Start`** (každý stisk 1–4
+  cvakne, pátý otevře; když `Select` pustíš, počítadlo se vynuluje).
+- **Klávesnice:** `Tab`.
+
+Statistiky se ukážou jako **překryv přes hru**. Ovládání uvnitř: **`←` / `→`** listuje dny,
+**`↑` / `↓`** roluje, **`A` / `Start` / `Select`** (nebo `Enter` / `Esc`) = zpět do hry.
 
 > Pozn.: data se ukládají lokálně přes `localStorage` v daném prohlížeči a počítači;
 > nikam se neodesílají. (localStorage zvolen místo IndexedDB, protože spolehlivě funguje
