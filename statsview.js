@@ -88,7 +88,7 @@
         table+='<tr>'
           +'<td>'+fmtTime(g.startedAt)+'</td>'
           +'<td class="dur">'+fmtDur(g.durationMs)+'</td>'
-          +'<td class="vir">'+g.viruses+' ('+(g.level>=6?'hardcore':'úroveň '+g.level)+')</td>'
+          +'<td class="vir">'+g.viruses+' (úroveň '+g.level+')</td>'
           +'<td>'+(g.vsAI?'vs počítač':'dva hráči')+'</td>'
           +'<td class="score"><span class="sL win-L">'+sL+'</span> : <span class="sR win-R">'+sR+'</span></td>'
           +'<td>'+win+'</td>'
