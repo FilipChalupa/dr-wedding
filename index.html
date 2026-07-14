@@ -291,7 +291,7 @@ function togglePause(){
   if(mode!=='play' || ending) return;
   paused=!paused;
   if(paused){ pausePrev=performance.now(); musicStop(); pauseMusicStart(); }   // v pauze tichá klidná hudba
-  else { pauseMusicStop(); musicStart(); }
+  else { padDropped=false; pauseMusicStop(); musicStart(); }                    // pokračování smaže hlášku o odpojení
 }
 // auto-pauza při ztrátě fokusu okna — hráč musí sám odpauzovat (P / Start)
 function pauseGame(){
@@ -307,6 +307,22 @@ function quitToMenu(){
   mode='menu';
   musicStop(); pauseMusicStop();
 }
+
+// ---- Kiosk: návrat do menu po nečinnosti (attract) ----
+// Když host odejde uprostřed hry nebo na výherní obrazovce, po IDLE_MS bez
+// jakéhokoli vstupu se kiosk sám vrátí do menu, ať je pořád „zvoucí".
+const IDLE_MS = 180000;                       // 3 min bez vstupu
+let lastInputAt = performance.now();
+function noteInput(){ lastInputAt = performance.now(); }   // volá se při každém vstupu (klávesa / ovladač / dotyk)
+function idleToMenu(){
+  if(mode==='menu') return;
+  if(mode==='stats'){ closeStats(); noteInput(); return; }
+  // 'play' i 'over': ukonči zvuk/hru, zruš eastereggy → menu (rozehraná hra se neukládá)
+  stopAllSound(); musicStop(); pauseMusicStop();
+  paused=false; ending=false; swapMode=false; unflip();
+  mode='menu'; noteInput();
+}
+window.addEventListener('pointerdown', noteInput);   // dotyk / myš = taky vstup
 
 //================= GAME STATE =================
 let mode = 'menu';        // 'menu' | 'play' | 'over' | 'stats'
@@ -924,6 +940,7 @@ function startGame(ai){
   winPending=false; firstDone=null; firstOutcome=null; isDraw=false;   // reset stavu remízy
   paused=false;
   ending=false;
+  padDropped=false;                        // nová hra → zruš případnou hlášku o odpojení ovladače
   countdownEnd=performance.now()+COUNTDOWN_MS;
   gameStart=countdownEnd;
   gameStartWall=Date.now()+COUNTDOWN_MS;   // reálný čas, kdy hra po odpočtu začne
@@ -974,7 +991,7 @@ function updatePlayer(p){
   }
 }
 function update(){
-  if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; winPending=false; } return; }   // výsledek → přestat blikat
+  if(ending){ if(performance.now()>=freezeEnd){ ending=false; mode='over'; winPending=false; noteInput(); } return; }   // výsledek → přestat blikat (a nastartuj idle okno pro výherní obrazovku)
   if(paused){
     // pauza zmrazí čas: posuň časové kotvy, aby „zbývající" odpočet i náběh rychlosti stály
     const t=performance.now(), dt=t-pausePrev; pausePrev=t;
@@ -1296,6 +1313,7 @@ function drawPlay(hideSide){
   if(mode==='play' && paused){
     ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
     T('PAUZA', W/2, H/2-6, 28, '#f8d77e', 'center', true);
+    if(padDropped) T('⚠ ODPOJEN OVLADAČ — připoj ho zpět', W/2, H/2-26, 8, '#ff9d5d', 'center', true);
     T((anyPad?'START':'P')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
     T((anyPad?'SELECT':'Q')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
   }
@@ -1381,31 +1399,42 @@ function drawOver(){
 // takže i při nižším fps (třeba na Raspberry Pi) je rychlost hry i těžknutí konzistentní.
 // Vykresluje se jednou za snímek; vstup se čte jednou za snímek.
 let prevT=null, tAcc=0; const STEP=1000/60;
+let lastFrameErr=0;                         // throttling logu chyb (ať nespamuje konzoli)
 function frame(now){
-  if(prevT===null) prevT=now;
-  let dt=now-prevT; prevT=now;
-  if(dt>250) dt=250;                       // po přepnutí tabu apod. nedoháněj tisíce kroků
-  tAcc+=dt;
-  let steps=0;
-  while(tAcc>=STEP && steps<6){            // dožeň reálný čas, ale max pár kroků na snímek
-    tAcc-=STEP; frameCount++;
-    // pohupování postaviček zrychluje s tempem hry (stejně jako hudba); fáze se akumuluje, ať se neškube
-    bobPhase += 0.09 * (mode==='play' ? 1 + gameSpeedProg()*1.3 : 1);
-    pollGamepads();                        // vstup i pohyb do stran (DAS) běží po krocích → konzistentní i při <60 fps
-    pollKeyboard();
-    pollMenuEgg();                         // herní časovač (držení doprava 5 s)
-    if(blinkGroom>0) blinkGroom--;         // mrknutí očí v menu (fps-nezávisle)
-    if(blinkBride>0) blinkBride--;
-    if(mode==='play') update();
-    steps++;
+  // Celá smyčka je v try/catch: jednorázová výjimka v logice/kreslení nesmí shodit
+  // requestAnimationFrame níže — jinak by kiosk navždy zamrzl a na akci to nikdo nerozchodí.
+  try{
+    if(prevT===null) prevT=now;
+    let dt=now-prevT; prevT=now;
+    if(dt>250) dt=250;                       // po přepnutí tabu apod. nedoháněj tisíce kroků
+    tAcc+=dt;
+    let steps=0;
+    while(tAcc>=STEP && steps<6){            // dožeň reálný čas, ale max pár kroků na snímek
+      tAcc-=STEP; frameCount++;
+      // pohupování postaviček zrychluje s tempem hry (stejně jako hudba); fáze se akumuluje, ať se neškube
+      bobPhase += 0.09 * (mode==='play' ? 1 + gameSpeedProg()*1.3 : 1);
+      pollGamepads();                        // vstup i pohyb do stran (DAS) běží po krocích → konzistentní i při <60 fps
+      pollKeyboard();
+      pollMenuEgg();                         // herní časovač (držení doprava 5 s)
+      if(blinkGroom>0) blinkGroom--;         // mrknutí očí v menu (fps-nezávisle)
+      if(blinkBride>0) blinkBride--;
+      if(mode==='play') update();
+      steps++;
+    }
+    if(mode!=='menu' && now-lastInputAt>IDLE_MS) idleToMenu();   // dlouhá nečinnost → zpět do menu
+    if(mode==='menu') drawMenu();
+    else if(mode==='play') drawPlay();
+    else if(mode==='over') drawOver();
+    // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
+  }catch(err){
+    if(now-lastFrameErr>2000){ lastFrameErr=now; console.error('Chyba ve smyčce hry (pokračuji dál):', err); }
   }
-  if(mode==='menu') drawMenu();
-  else if(mode==='play') drawPlay();
-  else if(mode==='over') drawOver();
-  // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// Poslední záchrana: nezachycené chyby/přísliby jen zaloguj, ať se aplikace nezhroutí.
+window.addEventListener('error', e=>{ console.error('Nezachycená chyba:', e.error||e.message); });
+window.addEventListener('unhandledrejection', e=>{ console.error('Nezachycený příslib:', e.reason); });
 
 //================= INPUT =================
 // DAS pohyb do stran z herní smyčky (1× hned, krátká prodleva, pak rychlé opakování)
@@ -1426,6 +1455,7 @@ function pollKeyboard(){
 
 window.addEventListener('keydown', e=>{
   keyHeld[e.code]=true;
+  noteInput();                                  // jakákoli klávesa = vstup (reset idle časovače)
   audioInit();                                  // jakákoli klávesa = gesto → rozběhni/obnov zvuk
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
   if(e.code==='KeyM'){ toggleMute(); updateMuteBtn(); return; }   // ztlumit / zapnout zvuk
@@ -1542,6 +1572,7 @@ function pollGamepads(){
     playerPads[pIdx] = slot;                       // zapamatuj ovladač pro vibrace tohoto hráče
     const cur = readPad(gp), prev = padPrev[slot] || {};
     const hit = k => cur[k] && !prev[k];
+    if(cur.up||cur.down||cur.left||cur.right||cur.confirm||cur.start||cur.back||cur.rotCW||cur.rotCCW||cur.mute) noteInput();   // aktivita na ovladači = vstup (reset idle časovače)
 
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
     if(mode==='menu' && hit('mute')){ audioInit(); toggleMute(); updateMuteBtn(); }   // L1/R1 = ztlumit (jen v menu)
@@ -1611,7 +1642,13 @@ function pollGamepads(){
     padPrev[slot] = cur;
   }
 }
-window.addEventListener('gamepadconnected', ()=>{});
+let padDropped = false;   // odpojil se ovladač během hry? → hláška na pauze
+window.addEventListener('gamepadconnected', ()=>{ padDropped=false; });   // zase připojen → hláška zmizí
+// Odpojení ovladače uprostřed hry (vybitá baterka, vytažený kabel) → automaticky pauza,
+// ať hráč nepřijde o rozehraný duel a ví, co se stalo.
+window.addEventListener('gamepaddisconnected', ()=>{
+  if(mode==='play' && !ending && !paused){ padDropped=true; pauseGame(); }
+});
 
 //================= FULLSCREEN =================
 function toggleFull(){

@@ -3,7 +3,7 @@
 //   - online: vždy zkus síť, čerstvou odpověď ulož do cache a vrať ji
 //   - offline / síť selže: vrať poslední uloženou verzi z cache
 // (Funguje jen při hostování přes http(s) nebo localhost, ne přes file://.)
-const CACHE = 'dr-wedding-v4';
+const CACHE = 'dr-wedding-v5';
 const ASSETS = ['./', 'index.html', 'stats.html', 'sounds.html', 'audio.js', 'statsview.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e=>{
