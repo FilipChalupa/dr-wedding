@@ -832,8 +832,21 @@ function countHoles(g){
   return holes;
 }
 // všechna možná umístění kapsle (barvy ca/cb) na desku g: spadne dolů, vyřeší se kaskáda
+// Postih za položení DVOUBAREVNÉ kapsle nastojato. Svislá dvoubarevná si zamkne
+// jednu barvu pod druhou ve sloupci a snadno si tím AI zaveze desku; naležato se
+// obě barvy rozloží do dvou sloupců. Jednobarevná svislá se netrestá — ta je čistý
+// příspěvek ke svislé čtveřici, takže „na výšku jen když je to extra dobré".
+// 0 = vypnuto (původní chování).
+//
+// Měřeno na 80 simulovaných partiích (dvoubarevné naležato / zbylé viry z 16):
+//   0 → 44.6 % / 6.64      25  → 82.0 % / 6.19      150 → 96.9 % / 4.71
+//   6 → 61.0 % / 7.04      60  → 92.4 % / 4.90      400 → 97.2 % / 4.38
+// Pozor, není to kompromis: AI je s tím i výrazně SILNĚJŠÍ (4.7 vs 6.6 zbylých virů)
+// a míň si zasypává starosti. Nad ~150 už se to jen plazí, proto 150.
+let AI_VERT_MIX_PEN = 150;
 function aiPlacements(g, ca, cb){
   const out=[];
+  const mixed = ca!==cb;
   for(let o=0;o<4;o++) for(let c=0;c<COLS;c++){
     let pill={r:0,c,orient:o,ca,cb};
     if(!canPlace(g,pill)) continue;
@@ -842,7 +855,8 @@ function aiPlacements(g, ca, cb){
     const ng=gridClone(g);
     placeInto(ng,pill);
     const res=resolveFull(ng);
-    out.push({col:c, orient:o, r:pill.r, g:ng, res});
+    const vpen = (mixed && (o===1||o===3)) ? AI_VERT_MIX_PEN : 0;
+    out.push({col:c, orient:o, r:pill.r, g:ng, res, vpen});
   }
   return out;
 }
@@ -885,7 +899,9 @@ function aiEval(g){
 function aiPlanDeep(p){
   const all=aiPlacements(p.grid, p.pill.ca, p.pill.cb);
   if(all.length===0) return {score:-1e18, col:(COLS/2|0)-1, orient:0};
-  for(const pl of all) pl.q = countViruses(pl.g)===0 ? 1e9 : aiEval(pl.g);
+  // vpen = postih za svislou dvoubarevnou kapsli; u vítězného tahu se neuplatní,
+  // ať AI kvůli stylu nezahodí smazání poslední starosti
+  for(const pl of all) pl.q = countViruses(pl.g)===0 ? 1e9 : aiEval(pl.g) - pl.vpen;
   all.sort((a,b)=>b.q-a.q);
   const first = all.slice(0, AIK);
   let best={score:-1e18, col:first[0].col, orient:first[0].orient};
@@ -895,7 +911,7 @@ function aiPlanDeep(p){
     else {
       const sec=aiPlacements(pl.g, p.next.ca, p.next.cb);
       if(sec.length===0){ val = -1e12; }                    // po tomto tahu se další kapsle nevejde → hrozí smrt
-      else { let m=-1e18; for(const s of sec){ const e = countViruses(s.g)===0 ? 1e8 : aiEval(s.g); if(e>m) m=e; } val=m; }
+      else { let m=-1e18; for(const s of sec){ const e = countViruses(s.g)===0 ? 1e8 : aiEval(s.g); if(e>m) m=e; } val=m - pl.vpen; }
     }
     if(val>best.score) best={score:val, col:pl.col, orient:pl.orient};
   }
