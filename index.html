@@ -168,8 +168,12 @@
     display:flex; align-items:center; justify-content:center;
   }
   body.tvmode .tv::before, body.tvmode .led { display:none; }
+  /* --tv-safe = jaká část rámu je na televizi doopravdy vidět (0.92 = 92 %).
+     CRT kvůli overscanu ukusuje ~5–10 % na každé straně, takže obraz zmenšíme
+     do bezpečné zóny — jinak se ořízne titulek. Ladí se z URL: ?tv&safe=90 */
   body.tvmode .screen {
-    width:min(100vw,133.333vh); height:auto;
+    width:min(calc(100vw * var(--tv-safe,0.92)), calc(133.333vh * var(--tv-safe,0.92)));
+    height:auto;
     border-radius:0;
     box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
   }
@@ -250,7 +254,17 @@
 <script>
 //================= SETUP =================
 // ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
-if(new URLSearchParams(location.search).has('tv')) document.body.classList.add('tvmode');
+// ?safe=90 -> doladí underscan proti overscanu televize (kolik % rámu je vidět).
+//   100 = plný rám (jako dřív), níž = menší obraz. Kolik přesně ubrat se od stolu
+//   neuhádne, každá CRT ukusuje jinak — proto se to ladí z URL, ne v kódu.
+{
+  const q = new URLSearchParams(location.search);
+  if(q.has('tv')){
+    document.body.classList.add('tvmode');
+    const safe = parseFloat(q.get('safe'));
+    if(safe >= 50 && safe <= 100) document.documentElement.style.setProperty('--tv-safe', safe/100);
+  }
+}
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
