@@ -147,6 +147,8 @@ Počítačový soupeř se řídí hodnotící funkcí `aiEval` a třemi konstant
 | `AI_VERT_MIX_PEN` | postih za **dvoubarevnou kapsli nastojato** (ta si zamkne barvu pod barvou) |
 | `AI_HORIZ_W` | jak moc se smí snažit stavět **vodorovné** čtveřice |
 | `AI_ADJ_W` | odměna za **skládání stejných barev** na sebe |
+| `AIK` | kolik nejlepších tahů promýšlí do hloubky (menší = zahodí i dobrý tah) |
+| `AI_PACE_USE`, `AI_PACE_MAX` | **tempo** — jak rozvážně kapslí otáčí a posouvá |
 
 Chování AI se nedá poznat od stolu ani z jedné odehrané partie — pár set tahů vypadá
 náhodně a člověk si k tomu snadno vymyslí špatné vysvětlení. Proto je v repu měřicí
@@ -166,6 +168,18 @@ git show HEAD~5:index.html > /tmp/old.html && node tools/ai-sim.js /tmp/old.html
 
 > Čísla mají šum. Rozdíl pod ~0,3 zbylého viru při 80 partiích neznamená nic —
 > na závěry o síle je potřeba aspoň `GAMES=150`.
+
+`ai-sim.js` pokládá kapsle rovnou na cíl, takže neřeší, jestli je tam AI **stihne dovézt**.
+Na to je [`tools/ai-pace-test.js`](tools/ai-pace-test.js), který simuluje smyčku snímek po
+snímku. Pusť ho po každém zásahu do tempa — hlídá, že kapsle nedopadne po cestě:
+
+```bash
+node tools/ai-pace-test.js             # start hry (95 snímků na řádek)
+SPEED=22 node tools/ai-pace-test.js    # nejvyšší rychlost — tady to praská nejdřív
+```
+
+> „MINULO CIL" má zůstat kolem **0,2 %**. Když povyskočí (klidně na 3 %), manévruje AI
+> pomaleji, než stíhá, a pokládá kapsle jinam, než plánovala.
 
 ## Technické
 
