@@ -917,9 +917,13 @@ function aiPlanDeep(p){
   // vpen = postih za svislou dvoubarevnou kapsli; u vítězného tahu se neuplatní,
   // ať AI kvůli stylu nezahodí smazání poslední starosti
   for(const pl of all) pl.q = countViruses(pl.g)===0 ? 1e9 : aiEval(pl.g) - pl.vpen;
+  // Zamíchat PŘED řazením: sort je v JS stabilní, takže by se u shodného skóre držel
+  // pořádek z aiPlacements (orientace 0..3, sloupce zleva) a do hloubky by šly pořád
+  // tytéž tahy. Náhoda dá rovnocenným kandidátům stejnou šanci dostat se do AIK.
+  for(let i=all.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [all[i],all[j]]=[all[j],all[i]]; }
   all.sort((a,b)=>b.q-a.q);
   const first = all.slice(0, AIK);
-  let best={score:-1e18, col:first[0].col, orient:first[0].orient, r:first[0].r};
+  let bestVal=-1e18, ties=[];
   for(const pl of first){
     let val;
     if(countViruses(pl.g)===0){ val = 1e9 + pl.r; }        // vítězný tah (smazal poslední virus)
@@ -928,9 +932,14 @@ function aiPlanDeep(p){
       if(sec.length===0){ val = -1e12; }                    // po tomto tahu se další kapsle nevejde → hrozí smrt
       else { let m=-1e18; for(const s of sec){ const e = countViruses(s.g)===0 ? 1e8 : aiEval(s.g); if(e>m) m=e; } val=m - pl.vpen; }
     }
-    if(val>best.score) best={score:val, col:pl.col, orient:pl.orient, r:pl.r};
+    // Rovnocenné tahy sbírej a vyber z nich náhodně. S ostrým > by při shodě vyhrál
+    // vždycky ten první, takže AI byla deterministická: stejná deska + stejné kapsle
+    // = do puntíku stejná partie (dvě AI vedle sebe hrály zrcadlově).
+    if(val>bestVal){ bestVal=val; ties=[pl]; }
+    else if(val===bestVal) ties.push(pl);
   }
-  return best;
+  const pick = ties[(Math.random()*ties.length)|0];
+  return {score:bestVal, col:pick.col, orient:pick.orient, r:pick.r};
 }
 // Kolik nejlepších 1-ply tahů se promýšlí do hloubky. Zbytek se zahodí podle rychlého
 // 1-ply hodnocení — když je K moc malé, AI vyhodí dobrý tah dřív, než se na něj podívá.
