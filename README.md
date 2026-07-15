@@ -137,6 +137,36 @@ ale nefungovala, „network first" by čekal na timeout u každého souboru a st
 - Obě postavičky se houpou a vyskočí radostí, když se jim něco smaže.
 - Po výhře: „PRÁVĚ SEZDÁNI!", oba spolu, létající srdíčka a koruna nad vítězem.
 
+## Ladění AI
+
+Počítačový soupeř se řídí hodnotící funkcí `aiEval` a třemi konstantami v
+[`index.html`](index.html), u kterých jsou v komentáři naměřené tabulky:
+
+| konstanta | co dělá |
+|---|---|
+| `AI_VERT_MIX_PEN` | postih za **dvoubarevnou kapsli nastojato** (ta si zamkne barvu pod barvou) |
+| `AI_HORIZ_W` | jak moc se smí snažit stavět **vodorovné** čtveřice |
+| `AI_ADJ_W` | odměna za **skládání stejných barev** na sebe |
+
+Chování AI se nedá poznat od stolu ani z jedné odehrané partie — pár set tahů vypadá
+náhodně a člověk si k tomu snadno vymyslí špatné vysvětlení. Proto je v repu měřicí
+harness [`tools/ai-sim.js`](tools/ai-sim.js): načte `index.html` do Node s podstrčeným
+DOM, odsimuluje celé partie a vypíše tvrdá čísla (jak kapsle pokládá, jak maže viry,
+jak si zasypává starosti a jak je silná).
+
+```bash
+node tools/ai-sim.js               # výchozí nastavení, 80 partií
+GAMES=200 node tools/ai-sim.js     # víc partií = míň šumu
+ADJ=50 node tools/ai-sim.js        # zkus jinou hodnotu bez editace kódu
+VPEN=0 HW=1 node tools/ai-sim.js   # chování před laděním AI
+
+# porovnání se starší verzí
+git show HEAD~5:index.html > /tmp/old.html && node tools/ai-sim.js /tmp/old.html
+```
+
+> Čísla mají šum. Rozdíl pod ~0,3 zbylého viru při 80 partiích neznamená nic —
+> na závěry o síle je potřeba aspoň `GAMES=150`.
+
 ## Technické
 
 Vše je v jediném souboru [`index.html`](index.html) — HTML, CSS i JavaScript (vanilla,
