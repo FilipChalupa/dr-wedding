@@ -871,6 +871,16 @@ function aiPlacements(g, ca, cb){
 // Pozn.: páka je slabší, než by se čekalo — o sebrání viru rozhoduje hlavně
 // -countViruses*1000 (deska se hodnotí až PO resolveFull), tohle ovlivňuje jen stavění.
 let AI_HORIZ_W = 0.1;
+// Odměna za stejnobarevné sousedy (staví budoucí čtveřice). Když AI nemá dobrý tah,
+// tohle rozhoduje, jestli barvy skládá na sebe, nebo je jen náhodně rozhazuje.
+// Původně 2 — proti holes*22 drobek, takže se barvy skládaly jen když to nic nestálo.
+//
+// Měřeno na 80 partiích (podíl svislých dvojic se stejnou barvou / zbylé viry / zasypání):
+//   2 → 47.9 % / 4.45 / 9.54      25  → 56.0 % / 4.96 / 8.44
+//   6 → 52.2 % / 4.89 / 9.14      50  → 57.5 % / 5.92 / 7.92
+//  12 → 53.8 % / 4.91 / 9.21     100  → 59.3 % / 6.64 / 7.87
+// Nad 25 se skládání už jen plazí, ale síla znatelně padá — proto 25.
+let AI_ADJ_W = 25;
 function aiEval(g){
   let holes=0, aggH=0, bump=0, adjH=0, adjV=0, vadjH=0, vadjV=0;
   const H=new Array(COLS).fill(0);
@@ -892,7 +902,7 @@ function aiEval(g){
   const maxH=Math.max(...H);
   // vadj (shoda barvy přímo u viru) je cennější než běžná shoda — vede rovnou ke smazání starosti
   return -countViruses(g)*1000 - holes*22 - aggH*0.8 - bump*2 - maxH*maxH*0.35
-       + adjV*2 + adjH*2*AI_HORIZ_W + vadjV*40 + vadjH*40*AI_HORIZ_W;
+       + adjV*AI_ADJ_W + adjH*AI_ADJ_W*AI_HORIZ_W + vadjV*40 + vadjH*40*AI_HORIZ_W;
 }
 // hardcore: rozmýšlej 2 kapsle dopředu — po každém umístění zkus nejlepší reakci další kapslí.
 // Předfiltr: hluboko (2-ply) prozkoumej jen nejlepších K umístění podle rychlého 1-ply (svižnost).
