@@ -848,8 +848,17 @@ function aiPlacements(g, ca, cb){
 }
 // kvalita desky (vyšší = lepší): trestá zbylé viry, díry, výšku a nerovnost;
 // ODMĚŇUJE stejnobarevné sousedy (staví linie vedoucí ke smazání virů)
+// Jak moc se AI smí snažit STAVĚT vodorovné čtveřice (napříč sloupci).
+// 1 = stejně jako svislé (původní chování), 0 = vodorovné linie si vůbec necení.
+// Vodorovné mazání vypadá nepřirozeně a hůř se čte, proto je přibrzděné.
+// Měřeno na 150 simulovaných partiích (podíl virů zničených vodorovně / zbylé viry):
+//   1.0 → 45.6 % / 6.1     0.2 → 41.5 % / 6.1
+//   0.3 → 42.5 % / 6.0     0.1 → 37.6 % / 6.3     0 → 24.1 % / 6.9
+// Pozn.: páka je slabší, než by se čekalo — o sebrání viru rozhoduje hlavně
+// -countViruses*1000 (deska se hodnotí až PO resolveFull), tohle ovlivňuje jen stavění.
+let AI_HORIZ_W = 0.1;
 function aiEval(g){
-  let holes=0, aggH=0, bump=0, adj=0, vadj=0;
+  let holes=0, aggH=0, bump=0, adjH=0, adjV=0, vadjH=0, vadjV=0;
   const H=new Array(COLS).fill(0);
   for(let c=0;c<COLS;c++){
     let seen=false;
@@ -857,10 +866,10 @@ function aiEval(g){
       const cell=g[I(r,c)];
       if(cell){
         if(!seen){ H[c]=ROWS-r; seen=true; }
-        const rN = c+1<COLS ? g[I(r,c+1)] : null;   // soused vpravo
-        const dN = r+1<ROWS ? g[I(r+1,c)] : null;   // soused dole
-        if(rN&&rN.color===cell.color){ adj++; if(cell.kind==='virus'||rN.kind==='virus') vadj++; }
-        if(dN&&dN.color===cell.color){ adj++; if(cell.kind==='virus'||dN.kind==='virus') vadj++; }
+        const rN = c+1<COLS ? g[I(r,c+1)] : null;   // soused vpravo → vodorovná linie
+        const dN = r+1<ROWS ? g[I(r+1,c)] : null;   // soused dole   → svislá linie
+        if(rN&&rN.color===cell.color){ adjH++; if(cell.kind==='virus'||rN.kind==='virus') vadjH++; }
+        if(dN&&dN.color===cell.color){ adjV++; if(cell.kind==='virus'||dN.kind==='virus') vadjV++; }
       } else if(seen) holes++;
     }
     aggH+=H[c];
@@ -868,7 +877,8 @@ function aiEval(g){
   for(let c=0;c<COLS-1;c++) bump+=Math.abs(H[c]-H[c+1]);
   const maxH=Math.max(...H);
   // vadj (shoda barvy přímo u viru) je cennější než běžná shoda — vede rovnou ke smazání starosti
-  return -countViruses(g)*1000 - holes*22 - aggH*0.8 - bump*2 - maxH*maxH*0.35 + adj*2 + vadj*40;
+  return -countViruses(g)*1000 - holes*22 - aggH*0.8 - bump*2 - maxH*maxH*0.35
+       + adjV*2 + adjH*2*AI_HORIZ_W + vadjV*40 + vadjH*40*AI_HORIZ_W;
 }
 // hardcore: rozmýšlej 2 kapsle dopředu — po každém umístění zkus nejlepší reakci další kapslí.
 // Předfiltr: hluboko (2-ply) prozkoumej jen nejlepších K umístění podle rychlého 1-ply (svižnost).
