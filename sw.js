@@ -1,9 +1,12 @@
 // Service worker pro Dr. Wedding — offline provoz.
-// Strategie: network first, cache jako fallback.
-//   - online: vždy zkus síť, čerstvou odpověď ulož do cache a vrať ji
-//   - offline / síť selže: vrať poslední uloženou verzi z cache
+// Strategie: cache first (stale-while-revalidate).
+//   - je v cache: vrať ji OKAMŽITĚ a na pozadí si stáhni čerstvou verzi pro příště
+//   - není v cache: jdi na síť a odpověď si ulož
+// Proč ne network first: na kiosku (svatba) je síť to nejméně spolehlivé. Když WiFi
+// *je*, ale je mrtvá, network first čeká na timeout u každého souboru → pomalý start.
+// Cache first je okamžitý a na síti vůbec nezávisí; novou verzi si vyzvedne na pozadí.
 // (Funguje jen při hostování přes http(s) nebo localhost, ne přes file://.)
-const CACHE = 'dr-wedding-v5';
+const CACHE = 'dr-wedding-v6';
 const ASSETS = ['./', 'index.html', 'stats.html', 'sounds.html', 'audio.js', 'statsview.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e=>{
@@ -22,20 +25,29 @@ self.addEventListener('activate', e=>{
 self.addEventListener('fetch', e=>{
   const req = e.request;
   if(req.method !== 'GET') return;                     // POST apod. neřešíme
-  e.respondWith(
-    fetch(req)
-      .then(resp=>{
-        // čerstvou (úspěšnou, vlastní) odpověď ulož do cache pro příští offline
-        if(resp && resp.status===200 && resp.type==='basic'){
-          const copy = resp.clone();
-          caches.open(CACHE).then(c=> c.put(req, copy));
-        }
-        return resp;
-      })
-      .catch(()=>                                       // síť selhala → fallback z cache
-        caches.match(req).then(cached=>
-          cached || (req.mode==='navigate' ? caches.match('index.html') : Response.error())
-        )
-      )
-  );
+  e.respondWith((async ()=>{
+    const cached = await caches.match(req);
+
+    // stažení čerstvé verze — běží i když vracíme cache (aktualizace na pozadí)
+    const fresh = fetch(req).then(resp=>{
+      if(resp && resp.status===200 && resp.type==='basic'){
+        const copy = resp.clone();
+        caches.open(CACHE).then(c=> c.put(req, copy)).catch(()=>{});
+      }
+      return resp;
+    }).catch(()=> null);                               // síť selhala → null (řeší se níž)
+
+    if(cached){
+      e.waitUntil(fresh);                              // drž SW naživu, než doběhne aktualizace
+      return cached;                                   // ...ale odpověz hned z cache
+    }
+    const resp = await fresh;
+    if(resp) return resp;
+    // není v cache ani na síti: u navigace aspoň vrať herní stránku
+    if(req.mode === 'navigate'){
+      const fallback = await caches.match('index.html');
+      if(fallback) return fallback;
+    }
+    return Response.error();
+  })());
 });
