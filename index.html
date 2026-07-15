@@ -927,7 +927,13 @@ function aiPlanDeep(p){
   }
   return best;
 }
-let AIK=6;   // kolik nejlepších 1-ply tahů se zkoumá do hloubky (menší = svižnější, i pro Raspberry Pi)
+// Kolik nejlepších 1-ply tahů se promýšlí do hloubky. Zbytek se zahodí podle rychlého
+// 1-ply hodnocení — když je K moc malé, AI vyhodí dobrý tah dřív, než se na něj podívá.
+// Měřeno (zbylé viry z 80 partií / čas jednoho rozhodnutí v Chromiu na kiosku, Celeron N4505):
+//   6 → 5.25 / 4.90 ms      12 → 4.08 / 6.26 ms      24 → 4.12 / 12.35 ms
+// Nad 12 už se síla nezlepší, jen roste cena. Rozhodnutí padne 1× na kapsli a snímek má
+// 16.7 ms, takže 6.26 ms je s rezervou. (Bylo 6 kvůli Raspberry Pi, to už se nepoužívá.)
+let AIK=12;
 function computeAiPlan(p){
   if(p.next) return aiPlanDeep(p);   // chytřejší plánování 2 kapsle dopředu (všechny úrovně)
   let best={score:-1e9, col:(COLS/2|0)-1, orient:0};

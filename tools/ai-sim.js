@@ -11,6 +11,7 @@
 //   node tools/ai-sim.js                      # výchozí nastavení z index.html, 80 partií
 //   GAMES=200 node tools/ai-sim.js            # víc partií = míň šumu (ale pomalejší)
 //   ADJ=50 node tools/ai-sim.js               # přebij AI_ADJ_W
+//   AIK=20 node tools/ai-sim.js               # kolik tahů se promýšlí do hloubky
 //   VPEN=0 HW=1 node tools/ai-sim.js          # chování před laděním AI
 //   node tools/ai-sim.js cesta/k/index.html   # porovnej jinou verzi (třeba git show)
 //
@@ -61,6 +62,7 @@ const TEST = `
   if(typeof AI_VERT_MIX_PEN !== 'undefined' && process.env.VPEN) AI_VERT_MIX_PEN = parseFloat(process.env.VPEN);
   if(typeof AI_HORIZ_W     !== 'undefined' && process.env.HW)   AI_HORIZ_W     = parseFloat(process.env.HW);
   if(typeof AI_ADJ_W       !== 'undefined' && process.env.ADJ)  AI_ADJ_W       = parseFloat(process.env.ADJ);
+  if(typeof AIK            !== 'undefined' && process.env.AIK)  AIK            = parseInt(process.env.AIK);
 
   const GAMES = ${GAMES}, VIRUSES = ${VIRUSES};
   const put = {mixH:0, mixV:0, sameH:0, sameV:0};
@@ -118,7 +120,7 @@ const TEST = `
   const pct = (a,b) => b ? (100*a/b).toFixed(1)+'%' : '-';
   const avg = left.reduce((a,b)=>a+b,0)/left.length;
   console.log('');
-  console.log('  nastaveni: AI_HORIZ_W=' + AI_HORIZ_W + ' AI_ADJ_W=' + AI_ADJ_W + ' AI_VERT_MIX_PEN=' + AI_VERT_MIX_PEN);
+  console.log('  nastaveni: AI_HORIZ_W=' + AI_HORIZ_W + ' AI_ADJ_W=' + AI_ADJ_W + ' AI_VERT_MIX_PEN=' + AI_VERT_MIX_PEN + ' AIK=' + AIK);
   console.log('  ' + GAMES + ' partii po ' + VIRUSES + ' starostech');
   console.log('');
   console.log('  POKLADANI');
