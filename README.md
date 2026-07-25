@@ -181,6 +181,19 @@ SPEED=22 node tools/ai-pace-test.js    # nejvyšší rychlost — tady to prask�
 > „MINULO CIL" má zůstat kolem **0,2 %**. Když povyskočí (klidně na 3 %), manévruje AI
 > pomaleji, než stíhá, a pokládá kapsle jinam, než plánovala.
 
+Ani jeden z předchozích testů nesáhne na `updatePlayer()`, kde žije **zámek po dosednutí**
+(`LOCK_DELAY`). Na tohle je [`tools/lock-delay-test.js`](tools/lock-delay-test.js), který
+žene skutečnou snímkovou smyčku a měří, kolik snímků kapsle **visí u dna**, než zapadne:
+
+```bash
+node tools/lock-delay-test.js               # aktuální verze, start (95) i max (22)
+node tools/lock-delay-test.js /tmp/old.html # porovnej se starší verzí (git show HEAD^:index.html)
+```
+
+> „Visí u dna" je přesně ta prodleva, kvůli které lidé ucukávali (mysleli, že už ovládají
+> další kapsli). Se zámkem po dosednutí spadla na startu hry z ~96 snímků (1,6 s) na 16
+> snímků (0,27 s); s drženým „dolů" na ~4 snímky (polož hned).
+
 ## Technické
 
 Vše je v jediném souboru [`index.html`](index.html) — HTML, CSS i JavaScript (vanilla,
