@@ -371,6 +371,11 @@ const CLEAR_FRAMES = 28;                // jak dlouho je vidět outline po zmize
 const SQUASH_FRAMES = 7;                // délka dopadového „squash" po položení kapsle
 const DAS_DELAY = 26, DAS_RATE = 9;    // posun do stran: 1× hned, prodleva, pak opakování
 const SPAWN_GRACE = 8;                 // snímků po vysazení kapsle, kdy se ještě neuplatní soft drop
+// Zámek po dosednutí: jakmile kapsle dosedne na povrch, drží se ještě chvilku, ať ji hráč
+// stihne těsně před zapadnutím posunout/otočit — pak zamkne. Dřív se čekalo celý interval
+// pádu (na pomalých úrovních až ~1,5 s), takže kapsle „visela" u dna a lidé už omylem
+// ovládali „další". Držení dolů = „polož hned", zamkne skoro okamžitě.
+const LOCK_DELAY = 16, LOCK_DELAY_SOFT = 3;
 // Tempo AI: jakou část zbývajícího času do dopadu smí strávit manévrováním (zbytek dopadne
 // soft dropem) a nejdelší pauza mezi dvěma akcemi ve snímcích. Bez stropu by AI na začátku
 // hry (řádek za 95 snímků) čekala mezi otočkami vteřiny; bez podílu by naopak při rychlém
@@ -475,7 +480,7 @@ function newPlayer(side){
     side,                       // 'L' groom, 'R' bride
     grid:new Array(COLS*ROWS).fill(null),
     pill:null, next:null, pillIdx:0,
-    dropTimer:0, padDrop:false, spawnGrace:0,   // padDrop = drží se dolů na ovladači; soft drop klávesnice se čte z keyHeld
+    dropTimer:0, lockTimer:0, padDrop:false, spawnGrace:0,   // padDrop = drží se dolů na ovladači; soft drop klávesnice se čte z keyHeld
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
     flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null,
@@ -1065,18 +1070,22 @@ function updatePlayer(p){
     p.aiPlan=null;
     p.spawnGrace=SPAWN_GRACE;   // krátká grace, ať nová kapsle při drženém „dolů" hned neproletí
     if(!canPlace(p.grid,p.pill)){ p.pill=null; playerFinished(p,'dead'); return; }
-    p.dropTimer=0;
+    p.dropTimer=0; p.lockTimer=0;
     return;
   }
   if(p.ai) aiThink(p);
   if(p.spawnGrace>0) p.spawnGrace--;
   // soft drop = drží se „dolů" (klávesnice nebo ovladač); funguje průběžně i pro další kapsle
   const soft = p.spawnGrace<=0 && (humanDownHeld(p) || p.padDrop);
-  p.dropTimer += soft ? 7 : 1;
-  if(p.dropTimer>=dropIntervalNow()){
+  if(!canPlace(p.grid,{...p.pill,r:p.pill.r+1})){
+    // kapsle dosedla → krátké okno na doladění pozice, pak zamkni (viz LOCK_DELAY)
     p.dropTimer=0;
-    const np={...p.pill,r:p.pill.r+1};
-    if(canPlace(p.grid,np)) p.pill=np; else lock(p);
+    if(++p.lockTimer>=(soft ? LOCK_DELAY_SOFT : LOCK_DELAY)) lock(p);
+  } else {
+    // ještě je pod ní volno → padá dál; okno zámku se resetuje (mohla sjet z hrany)
+    p.lockTimer=0;
+    p.dropTimer += soft ? 7 : 1;
+    if(p.dropTimer>=dropIntervalNow()){ p.dropTimer=0; p.pill={...p.pill,r:p.pill.r+1}; }
   }
 }
 function update(){
