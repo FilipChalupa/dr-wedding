@@ -1642,6 +1642,7 @@ function readPad(gp){
     rotCW:  b(0)||b(3)||up,                 // A + Y + křížek nahoru = po směru hodinových ručiček
     rotCCW: b(1)||b(2),                     // B + X = proti směru
     confirm: b(0)||b(9),                    // A nebo Start
+    face:    b(0)||b(1)||b(2)||b(3),        // kterékoli ze 4 předních tlačítek (otáčecí) — v menu spustí hru
     start:   b(9),                          // Start = pauza
     back:    b(8),                          // Select/Back = ukončit hru (z pauzy)
     mute:    b(4)||b(5),                    // horní tlačítka L1/R1 = ztlumit zvuk (hra je jinde nepoužívá)
@@ -1702,7 +1703,7 @@ function pollGamepads(){
       }
       if(cur.right) menuPadRight = true;          // pro odemčení držením doprava > 5 s
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
-      if(hit('confirm')) startGame(pendingAI);
+      if(hit('confirm')||hit('face')) startGame(pendingAI);   // Start i kterékoli ze 4 otáčecích tlačítek spustí hru
     } else if(mode==='over'){
       if(hit('confirm')){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     } else if(mode==='stats'){
