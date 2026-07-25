@@ -93,6 +93,13 @@ const Snd = {
     toneAt(233, t+0.24, 0.42, {type:'sawtooth', vol:0.17, slideTo:147});   // A# → povadlé klesnutí (dřív)
   },
   menu(){   tone(600,0.045,{type:'square',vol:0.10}); },   // krátké cvaknutí při změně nastavení v menu
+  toast(){   // „cink" skleniček na přípitek (skryté kombo: oba drží L1+R1) — jasný, sklovitý, doznívá
+    if(muted||!actx) return;
+    const t=actx.currentTime;
+    toneAt(1568, t,       0.55, {type:'triangle', vol:0.11, attack:0.001});   // G6 — vedoucí zvon
+    toneAt(2093, t+0.004, 0.50, {type:'sine',     vol:0.06, attack:0.001});   // C7 — třpyt
+    toneAt(3136, t,       0.22, {type:'sine',     vol:0.03, attack:0.001});   // vysoká jiskra
+  },
   win(){   // slavnostní svatební pochod (Mendelssohn – Svatební pochod, C dur)
     if(muted||!actx) return;
     const t0=actx.currentTime+0.05, q=0.30;          // délka čtvrťky (slavnostní tempo)
