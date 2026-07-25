@@ -93,6 +93,13 @@ const Snd = {
     toneAt(233, t+0.24, 0.42, {type:'sawtooth', vol:0.17, slideTo:147});   // A# → povadlé klesnutí (dřív)
   },
   menu(){   tone(600,0.045,{type:'square',vol:0.10}); },   // krátké cvaknutí při změně nastavení v menu
+  ano(){   // tiché „a-no" u oltáře (skryté kombo v menu: oba naráz zmáčknou start)
+    if(muted||!actx) return;
+    const t=actx.currentTime;
+    toneAt(523, t,      0.16, {type:'triangle', vol:0.12});   // „a"
+    toneAt(784, t+0.15, 0.34, {type:'triangle', vol:0.12});   // „no" — o kvintu výš
+    toneAt(1047,t+0.15, 0.34, {type:'sine',     vol:0.05});   // jemný třpyt navrch
+  },
   toast(){   // „cink" skleniček na přípitek (skryté kombo: oba drží L1+R1) — jasný, sklovitý, doznívá
     if(muted||!actx) return;
     const t=actx.currentTime;
