@@ -356,6 +356,7 @@ let overStartFrame = 0;                   // snímek, kdy naskočila výherní o
 let pendingStart = null;                 // {ai,deadline,by} — po stisku startu krátce čekej, jestli se přidá druhý (pak „Ano")
 const ANO_WINDOW = 14;                   // snímků okna „v rámci krátkého okamžiku"
 let padCount = 0;                        // připojených ovladačů (počítá pollGamepads)
+const decTimer = v => v>0 ? v-1 : 0;     // odtikání snímkových časovačů (fps-nezávisle, ve fixním kroku)
 let frameCount = 0;
 let bobPhase = 0;                        // fáze pohupování postaviček (zrychluje s tempem hry)
 let level = 3;                          // 1..5 -> počet starostí
@@ -1655,11 +1656,10 @@ function frame(now){
       pollGamepads();                        // vstup i pohyb do stran (DAS) běží po krocích → konzistentní i při <60 fps
       pollKeyboard();
       pollMenuEgg();                         // herní časovač (držení doprava 5 s)
-      if(blinkGroom>0) blinkGroom--;         // mrknutí očí v menu (fps-nezávisle)
-      if(blinkBride>0) blinkBride--;
-      if(toastTimer>0) toastTimer--;         // doznívání přípitkové animace (fps-nezávisle)
-      if(anoTimer>0) anoTimer--;             // doznívání „Ano" pokývnutí
-      if(glassTimer[0]>0) glassTimer[0]--; if(glassTimer[1]>0) glassTimer[1]--;   // doznívání jednotlivé skleničky
+      // snímkové časovače (mrknutí + doznívání easter-eggů) — jednotné odtikání
+      blinkGroom=decTimer(blinkGroom); blinkBride=decTimer(blinkBride);
+      toastTimer=decTimer(toastTimer); anoTimer=decTimer(anoTimer);
+      glassTimer[0]=decTimer(glassTimer[0]); glassTimer[1]=decTimer(glassTimer[1]);
       if(mode==='play') update();
       steps++;
     }

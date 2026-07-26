@@ -194,6 +194,18 @@ node tools/lock-delay-test.js /tmp/old.html # porovnej se starší verzí (git s
 > další kapsli). Se zámkem po dosednutí spadla na startu hry z ~96 snímků (1,6 s) na 16
 > snímků (0,27 s); s drženým „dolů" na ~4 snímky (polož hned).
 
+Herní smyčka polyká chyby v kreslení (`try/catch`), takže rozbitý easter egg by se jen tiše
+nevykreslil. [`tools/render-smoke.js`](tools/render-smoke.js) prožene všechny kreslicí cesty
+(menu, hra, výhra, combo hlášky, přípitek, „Ano", srdíčka…) a **spadne s nenulovým kódem**,
+když některá vyhodí výjimku — pouštěj po zásazích do render kódu:
+
+```bash
+node tools/render-smoke.js
+```
+
+> Podstrčené DOM/Canvas/WebAudio pro všechny čtyři node harnessy je ve sdíleném
+> [`tools/harness-env.js`](tools/harness-env.js) (`runGame(soubor, testovacíKód)`).
+
 ## Technické
 
 Vše je v jediném souboru [`index.html`](index.html) — HTML, CSS i JavaScript (vanilla,

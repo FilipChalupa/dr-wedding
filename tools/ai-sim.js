@@ -22,39 +22,12 @@
 // Pozn.: čísla mají šum. Rozdíl pod ~0.3 zbylého viru při 80 partiích neznamená nic —
 // na závěry o síle chce aspoň GAMES=150.
 
-const fs = require('fs');
 const path = require('path');
+const { ROOT, runGame } = require('./harness-env');   // sdílené podstrčené DOM/Canvas/WebAudio
 
-const ROOT = path.resolve(__dirname, '..');
 const GAME_FILE = process.argv[2] || path.join(ROOT, 'index.html');
 const GAMES = process.env.GAMES ? parseInt(process.env.GAMES) : 80;
 const VIRUSES = process.env.VIRUSES ? parseInt(process.env.VIRUSES) : 16;
-
-// ---- podstrčené DOM, ať herní kód projde v Node bez prohlížeče ----
-const noop = () => {};
-const ctx = new Proxy({}, { get: (t, k) => (k === 'canvas' ? { width: 720, height: 576 } : noop), set: () => true });
-const cls = new Proxy({}, { get: (t, k) => (k === 'contains' ? () => false : noop) });
-const el = () => ({
-  width: 720, height: 576, getContext: () => ctx, classList: cls,
-  style: { setProperty: noop }, addEventListener: noop,
-  getBoundingClientRect: () => ({ top: 0, bottom: 576, left: 0, right: 720 }),
-  querySelector: () => el(), appendChild: noop, innerHTML: '', scrollTop: 0,
-});
-globalThis.document = { getElementById: el, querySelector: el, querySelectorAll: () => [], body: el(), documentElement: el(), addEventListener: noop, createElement: el, hidden: false };
-globalThis.window = { addEventListener: noop, matchMedia: () => ({ matches: false, addEventListener: noop }), location: { search: '' } };
-globalThis.location = { search: '', href: '' };
-globalThis.navigator = { getGamepads: () => [], userAgent: 'node' };
-globalThis.requestAnimationFrame = noop;   // NESPOUŠTĚT herní smyčku
-globalThis.localStorage = { getItem: () => null, setItem: noop, removeItem: noop };
-globalThis.AudioContext = function () { return new Proxy({}, { get: () => () => ({ connect: noop, start: noop, stop: noop, gain: { value: 0, setValueAtTime: noop }, frequency: { value: 0 } }) }); };
-globalThis.webkitAudioContext = globalThis.AudioContext;
-globalThis.StatsView = { mount: () => ({ next: noop, prev: noop }), loadGames: () => [] };
-
-const audio = fs.readFileSync(path.join(ROOT, 'audio.js'), 'utf8');
-const html = fs.readFileSync(GAME_FILE, 'utf8');
-const m = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/i.exec(html);
-if (!m) { console.error('V ' + GAME_FILE + ' nenalezen vnořený <script>.'); process.exit(1); }
-const game = m[1];
 
 const TEST = `
 ;(function(){
@@ -137,4 +110,4 @@ const TEST = `
 })();
 `;
 
-new Function(audio + '\n' + game + '\n' + TEST)();
+runGame(GAME_FILE, TEST);
