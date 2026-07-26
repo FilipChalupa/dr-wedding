@@ -1583,9 +1583,9 @@ function drawMenu(){
 
   if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
 
-  // indikátor zvuku (přepíná se klávesou M)
-  // „M " je klávesová zkratka → skryj ji, když je připojen ovladač
-  T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
+  // indikátor zvuku (přepíná se klávesou M). „M " je klávesová zkratka → skryj ji s ovladačem.
+  // S připojeným ovladačem se „ZAP" vůbec neukazuje (ovladačem zvuk stejně nepřepneš) — jen „VYP" jako varování.
+  if(!anyPad || muted) T((anyPad?'':'M  ')+(muted?'ZVUK: VYP':'ZVUK: ZAP'), W-14, 12, 7, muted?'#9a6a6a':'#6a9a7a', 'right');
   // Statistiky jsou skryté (easter egg): na ovladači drž Select a 5× zmáčkni Start,
   // na klávesnici Tab. V menu se záměrně nenabízejí, aby na ně běžný host nenarazil.
 }
