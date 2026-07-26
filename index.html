@@ -493,7 +493,7 @@ function newPlayer(side){
     dropTimer:0, lockTimer:0, padDrop:false, spawnGrace:0,   // padDrop = drží se dolů na ovladači; soft drop klávesnice se čte z keyHeld
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
-    flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null,
+    flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null, hearts:[],   // hearts = poletující srdíčka (L1/R1 ve hře)
     dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
     finishedOutcome:null,       // 'win' | 'dead' — jak hráč skončil (aby se to spustilo jen jednou)
     score:0,
@@ -1122,6 +1122,10 @@ function update(){
     if(p.comboTimer>0) p.comboTimer--;
     if(p.animClear>0) p.animClear--;
     if(p.landFx && --p.landFx.t<=0) p.landFx=null;   // dopadový squash odezní
+    if(p.hearts.length){                              // poletující srdíčka stoupají a mizí
+      for(const h of p.hearts){ h.life--; h.y-=h.vy; h.x += Math.sin(h.sway+=0.12)*0.5; }
+      p.hearts = p.hearts.filter(h=>h.life>0);
+    }
   }
   // vypršelo okno na dorovnání → rozhodne konec prvního hráče
   if(winPending && !ending && performance.now()>=winDeadline){
@@ -1390,12 +1394,21 @@ function drawFlute(dir, s){
   ctx.fillStyle='rgba(255,255,255,0.7)';
   for(let i=0;i<3;i++){ const by=-6.5*s-((frameCount*0.4+i*9+dir*4)%(5*s)); ctx.beginPath(); ctx.arc((i-1)*0.7*s, by, 0.35*s, 0, 7); ctx.fill(); }
 }
+// jedna přípitková sklenička na svém místě (which 0=ženich vlevo, 1=nevěsta vpravo).
+// Stejná pozice se použije jak pro cink obou, tak pro skleničku jednoho hráče v menu.
+const TOAST_LAYOUT = { cx:W/2, baseY:120, s:2.2, lean:0.34, gap:10 };
+function toastFlute(which){
+  const {cx,baseY,s,lean,gap}=TOAST_LAYOUT;
+  ctx.save();
+  if(which===0){ ctx.translate(cx-gap, baseY); ctx.rotate(lean);  drawFlute(-1,s); }
+  else         { ctx.translate(cx+gap, baseY); ctx.rotate(-lean); drawFlute(1, s); }
+  ctx.restore();
+}
 function drawToast(){
-  const cx=W/2, baseY=120, s=2.2, lean=0.34, gap=10;
+  const {cx,baseY,s,lean}=TOAST_LAYOUT;
   const life=toastTimer/TOAST_FRAMES;                              // 1 → 0
   const clink=Math.max(0,(toastTimer-(TOAST_FRAMES-16))/16);       // prvních ~16 snímků = záblesk cinknutí
-  ctx.save(); ctx.translate(cx-gap, baseY); ctx.rotate(lean);  drawFlute(-1,s); ctx.restore();
-  ctx.save(); ctx.translate(cx+gap, baseY); ctx.rotate(-lean); drawFlute(1, s); ctx.restore();
+  toastFlute(0); toastFlute(1);
   const sx=cx, sy=baseY-12.5*s*Math.cos(lean);                     // místo doteku okrajů
   if(clink>0){
     ctx.strokeStyle='rgba(255,245,200,'+clink+')'; ctx.lineWidth=1.2;
@@ -1415,6 +1428,18 @@ function chatBubble(cx, cy, text, tailDir){
   const tx=cx+tailDir*(w/2-3), ty=cy+h/2-2;
   ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+tailDir*6, ty+6); ctx.lineTo(tx+tailDir*1.5, ty); ctx.closePath(); ctx.fill();
   T(text, cx, cy+3.5, 10, '#c0397a', 'center', true);
+}
+
+// srdíčka od hráče (L1/R1 ve hře): vyletí u jeho postavičky a stoupají vzhůru
+function spawnHearts(p){
+  if(!p.hearts) p.hearts=[];
+  if(p.hearts.length>36) return;                 // strop, ať to nezahltí
+  const cx = p.side==='L' ? 34 : 286;            // ženich vlevo, nevěsta vpravo
+  for(let i=0;i<6;i++){
+    p.hearts.push({ x:cx+(Math.random()*22-11), y:BY+BH-64+Math.random()*24,
+      vy:0.7+Math.random()*0.5, sway:Math.random()*6.28, life:56+(Math.random()*20|0),
+      sz:2.5+Math.random()*2.2, col:i%2?'#ef5f93':'#ff8ab0' });
+  }
 }
 
 function drawMini(x,y,color,s){
@@ -1467,6 +1492,9 @@ function drawPlay(hideSide){
     // jména pod postavičkami, na stejné lince jako počet starostí
     T('ŽENICH',  34,  BY+BH+12, 8, '#cba6ec', 'center', true);
     T('NEVĚSTA', 286, BY+BH+12, 8, '#f8a8c4', 'center', true);
+    // poletující srdíčka (L1/R1 ve hře) od každé postavičky
+    for(const p of players) for(const h of p.hearts){ ctx.globalAlpha=Math.min(1, h.life/18); heart(h.x, h.y, h.sz, h.col); }
+    ctx.globalAlpha=1;
   }
 
   drawBoard(players[0], LX0);
@@ -1540,9 +1568,9 @@ function drawMenu(){
     chatBubble(246, 78, 'Ano', -1);              // nevěsta (vpravo) → bublina napravo od ní, ocásek k ní
     ctx.globalAlpha=1;
   }
-  // jeden hráč drží L1/R1 → jeho sklenička, zvednutá směrem ke středu (bez cinknutí)
-  if(glassTimer[0]>0){ ctx.save(); ctx.translate(126,152); ctx.rotate(-0.18); drawFlute(-1,2); ctx.restore(); }
-  if(glassTimer[1]>0){ ctx.save(); ctx.translate(194,152); ctx.rotate(0.18);  drawFlute(1, 2); ctx.restore(); }
+  // jeden hráč drží L1/R1 → jen jeho sklenička, ale na stejném místě jako u přípitku obou (bez cinknutí)
+  if(glassTimer[0]>0) toastFlute(0);
+  if(glassTimer[1]>0) toastFlute(1);
 
   const c1 = pendingAI ? '#7a7a8a' : '#f8d77e';
   const c2 = pendingAI ? '#f8d77e' : '#7a7a8a';
@@ -1850,6 +1878,7 @@ function pollGamepads(){
       if(paused){ if(hit('back')) quitToMenu(); padPrev[slot]=cur; continue; }   // v pauze: Select = konec
       let p = players[pIdx];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
+      if(hit('mute') && p) spawnHearts(p);         // L1/R1 ve hře → poletující srdíčka od toho hráče
       if(!paused && p && !p.ai){
         if(hit('rotCW'))  rotate(p, -1);   // A / Y / nahoru → po směru hodinových ručiček
         if(hit('rotCCW')) rotate(p, 1);    // B / X → proti směru
