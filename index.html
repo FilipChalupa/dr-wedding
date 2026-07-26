@@ -1436,7 +1436,7 @@ function spawnHearts(p){
   if(p.hearts.length>36) return;                 // strop, ať to nezahltí
   const cx = p.side==='L' ? 34 : 286;            // ženich vlevo, nevěsta vpravo
   for(let i=0;i<6;i++){
-    p.hearts.push({ x:cx+(Math.random()*22-11), y:BY+BH-64+Math.random()*24,
+    p.hearts.push({ x:cx+(Math.random()*22-11), y:BY+BH-88+Math.random()*24,
       vy:0.7+Math.random()*0.5, sway:Math.random()*6.28, life:56+(Math.random()*20|0),
       sz:2.5+Math.random()*2.2, col:i%2?'#ef5f93':'#ff8ab0' });
   }
