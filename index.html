@@ -1878,7 +1878,7 @@ function pollGamepads(){
       if(paused){ if(hit('back')) quitToMenu(); padPrev[slot]=cur; continue; }   // v pauze: Select = konec
       let p = players[pIdx];
       if(p && p.ai) p = players.find(x=>!x.ai);   // sólo: libovolný ovladač ovládá člověka
-      if(hit('mute') && p) spawnHearts(p);         // L1/R1 ve hře → poletující srdíčka od toho hráče
+      if(hit('mute') && p && performance.now()>=countdownEnd) spawnHearts(p);   // L1/R1 ve hře → srdíčka (ne v pauze — sem se nedostane — ani během odpočtu)
       if(!paused && p && !p.ai){
         if(hit('rotCW'))  rotate(p, -1);   // A / Y / nahoru → po směru hodinových ručiček
         if(hit('rotCCW')) rotate(p, 1);    // B / X → proti směru
