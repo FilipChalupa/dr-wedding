@@ -796,7 +796,8 @@ function finishResolve(p){
     if(!o.ai) Snd.garbage();                 // příjemce (člověk) slyší příchozí smetí
     rumble(players.indexOf(o), {strong:0.9, weak:0.7, dur:130+garbage.length*30});   // náraz příjemci smetí
   }
-  if(p.chains>1){ p.comboTimer=70; p.comboN=p.chains; Snd.combo(p.chains); }
+  const comboLines = p.gainGarbage.length;   // kolik linií hráč v tahu smazal celkem (naráz i přes kaskády)
+  if(comboLines>1){ p.comboTimer=70; p.comboN=comboLines; Snd.combo(comboLines); }
   p.score += p.gainCells*10 + p.gainVir*50;
   p.virusCount=countViruses(p.grid);
   if(p.virusCount===0) checkCleared(p);
@@ -1347,11 +1348,15 @@ function heart(x,y,sz,col){
   ctx.fill();
 }
 
-// Řetězové kombo místo suchého čísla ukazuje stupňující se svatební hlášky.
-// comboN je počet řetězů (>=2). Delší text se sám zmenší, ať se vejde do láhve.
-// combo 2 je podle toho, kdo ho udělal: nevěsta (side 'R') „ráda", ženich (side 'L') „rád"
-const COMBO_MSG = { 3:'Miluji tě', 4:'Hyjé koníčku.' };
-function comboText(n, side){ n=Math.min(Math.max(n,2),4); return n===2 ? (side==='R'?'Mám tě ráda':'Mám tě rád') : COMBO_MSG[n]; }
+// Kombo (počet linií smazaných v tahu, >=2) ukazuje svatební hlášku místo suchého čísla.
+// 2 je podle toho, kdo ho udělal (nevěsta 'R' „ráda", ženich 'L' „rád"); 5 a víc už jen „Kombo N×".
+// Delší text se sám zmenší, ať se vejde do láhve.
+function comboText(n, side){
+  if(n===2) return side==='R' ? 'Mám tě ráda' : 'Mám tě rád';
+  if(n===3) return 'Miluji tě';
+  if(n===4) return 'Hyjé koníčku.';
+  return 'Kombo '+n+'×';
+}
 
 // svatební kytice (pro házení na výherní obrazovce)
 function drawBouquet(x, y, s, rot){
