@@ -119,6 +119,12 @@ ale nefungovala, „network first" by čekal na timeout u každého souboru a st
 > podá ta z cache a čerstvá se jen stáhne na pozadí. Na kiosku tedy po nasazení stránku
 > načtěte dvakrát (nebo hru restartujte dvakrát).
 
+Sdílené skripty (`audio.*.js`, `statsview.*.js`) mají v názvu **hash obsahu**, aby si
+klient nemohl nakombinovat nový `index.html` se starou verzí skriptu z cache (service
+worker i Cloudflare cachují každý soubor zvlášť). Po každé úpravě těchto skriptů spusť
+`node tools/hash-assets.js` — soubor přejmenuje podle nového obsahu a přepíše odkazy
+v HTML i `sw.js`.
+
 > Service worker funguje jen přes http(s) nebo `localhost` (ne přes `file://`). Vyzkoušet se
 > dá lokálně: `python3 -m http.server` ve složce hry, otevřít `http://localhost:8000/`,
 > načíst jednou online a pak v DevTools zapnout *Offline* (nebo vypnout server) — hra se

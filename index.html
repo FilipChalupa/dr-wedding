@@ -249,8 +249,8 @@
     <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>Esc / Start</b> zpět do hry</div>
   </div>
 
-<script src="audio.js"></script>
-<script src="statsview.js"></script>
+<script src="audio.40979ad6.js"></script>
+<script src="statsview.cae4963c.js"></script>
 <script>
 //================= SETUP =================
 // ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
@@ -291,7 +291,7 @@ const OPP = {U:'D',D:'U',L:'R',R:'L'};
 const I = (r,c)=> r*COLS+c;
 
 //================= HUDBA: napojení na stav hry =================
-// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.js.
+// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.40979ad6.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
 musicShouldPlay = () => mode==='play' && !paused;
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
@@ -1810,10 +1810,13 @@ function pollGamepads(){
   // Ovladače jinak zvuk neztlumují (mute je jen tlačítko na obrazovce), takže se nic netluče.
   let muteHeld=0; padCount=0;
   for(const gp of pads){ if(!gp) continue; padCount++; if((gp.buttons[4]&&gp.buttons[4].pressed)||(gp.buttons[5]&&gp.buttons[5].pressed)) muteHeld++; }
-  const bothToast = muteHeld>=2;
-  if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
-  if(mode==='menu' && bothToast && !toastPrev){ audioInit(); Snd.toast(); toastTimer=TOAST_FRAMES; }
+  const bothToast = muteHeld>=2, toastEdge = bothToast && !toastPrev;
+  // toastPrev nastav DŘÍV, než se cokoli spustí: kdyby zvuk/animace vyhodily výjimku,
+  // hrana by jinak platila každý krok znovu → smyčka by padala pořád dokola a hra
+  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.40979ad6.js bez Snd.toast).
   toastPrev = bothToast;
+  if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
+  if(mode==='menu' && toastEdge){ toastTimer=TOAST_FRAMES; audioInit(); Snd.toast(); }
   let order = 0;                                 // pořadí připojeného ovladače → hráč (0=ženich, 1=nevěsta)
   for(let i=0;i<pads.length;i++){
     const gp = pads[i]; if(!gp) continue;
@@ -1997,7 +2000,7 @@ function saveGame(rec){
   }catch(e){ console.warn('Statistiku se nepodařilo uložit:',e); }
 }
 // Statistiky lze zobrazit jako overlay přímo ve hře (kiosk / ovladače) i na samostatné
-// stránce stats.html — obojí vykresluje sdílený statsview.js.
+// stránce stats.html — obojí vykresluje sdílený statsview.cae4963c.js.
 let statsCtl = null;
 const statsOverlay = document.getElementById('statsOverlay');
 function openStats(){

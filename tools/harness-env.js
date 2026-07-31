@@ -57,11 +57,13 @@ function installGlobals(){
 }
 installGlobals();
 
-// vytáhne sdílený audio.js a vnořený <script> z HTML (výchozí index.html)
+// vytáhne sdílený zvukový modul a vnořený <script> z HTML (výchozí index.html)
 function readGame(gameFile){
   const file = gameFile || path.join(ROOT, 'index.html');
-  const audio = fs.readFileSync(path.join(ROOT, 'audio.js'), 'utf8');
   const html = fs.readFileSync(file, 'utf8');
+  // název zvukového modulu čti z HTML — soubor má v názvu hash obsahu (audio.<hash>.js)
+  const audioSrc = /<script[^>]*\bsrc="(audio[^"]*\.js)"/.exec(html)?.[1] || 'audio.js';
+  const audio = fs.readFileSync(path.join(ROOT, audioSrc), 'utf8');
   const m = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/i.exec(html);
   if(!m){ throw new Error('V ' + file + ' nenalezen vnořený <script>.'); }
   return { audio, game: m[1] };
