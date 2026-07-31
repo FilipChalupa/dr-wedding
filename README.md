@@ -4,6 +4,8 @@ Retro svatební hra ve stylu **Dr. Mario** — multiplayer pro dva hráče, žen
 Čistá webovka bez instalace, s generovaným retro pípáním i hudbou na pozadí (lze vypnout),
 stylizovaná do staré CRT televize 4:3.
 
+![](cartridge.png)
+
 ## Spuštění
 
 Otevři [`public/index.html`](public/index.html) v prohlížeči (stačí dvojklik). Nic víc není
