@@ -7,7 +7,7 @@
 // a volání funkce, která ve staré verzi neexistuje, spadne (viz zamrzlý přípitek L1+R1).
 // Hash v názvu znamená, že jiný obsah má jinou URL, takže rozjetá dvojice nemůže vzniknout.
 //
-// Spusť po KAŽDÉ úpravě audio*.js / statsview*.js:
+// Spusť po KAŽDÉ úpravě spravovaného souboru (audio*.js, statsview*.js, og*.jpg):
 //   node tools/hash-assets.js
 // Je to idempotentní — když názvy odpovídají obsahu, nic nezmění.
 
@@ -16,27 +16,31 @@ const path = require('path');
 const crypto = require('crypto');
 const ROOT = path.resolve(__dirname, '../public');   // kořen webu — vše, co se nasazuje, žije v public/
 
-const BASES = ['audio', 'statsview'];                            // spravované sdílené skripty
+const MANAGED = [                                                // spravované soubory: sdílené skripty + og obrázek
+  { base: 'audio',     ext: 'js' },
+  { base: 'statsview', ext: 'js' },
+  { base: 'og',        ext: 'jpg' },                             // náhled pro sociální sítě (og:image)
+];
 const REFS = ['index.html', 'stats.html', 'sounds.html', 'sw.js'];   // kde se na ně odkazuje
 
 let changed = false;
-for(const base of BASES){
-  const fileRe = new RegExp('^' + base + '(\\.[0-9a-f]{8})?\\.js$');
+for(const { base, ext } of MANAGED){
+  const fileRe = new RegExp('^' + base + '(\\.[0-9a-f]{8})?\\.' + ext + '$');
   const found = fs.readdirSync(ROOT).filter(f => fileRe.test(f));
   if(found.length !== 1){
-    console.error('Čekám právě jeden soubor ' + base + '[.<hash>].js, našel jsem: ' + (found.join(', ') || 'nic'));
+    console.error('Čekám právě jeden soubor ' + base + '[.<hash>].' + ext + ', našel jsem: ' + (found.join(', ') || 'nic'));
     process.exitCode = 1;
     continue;
   }
   const cur = found[0];
   const hash = crypto.createHash('sha1').update(fs.readFileSync(path.join(ROOT, cur))).digest('hex').slice(0, 8);
-  const next = base + '.' + hash + '.js';
+  const next = base + '.' + hash + '.' + ext;
   if(cur !== next){
     fs.renameSync(path.join(ROOT, cur), path.join(ROOT, next));
     console.log(cur + ' → ' + next);
     changed = true;
   }
-  const refRe = new RegExp(base.replace('.', '\\.') + '(\\.[0-9a-f]{8})?\\.js', 'g');
+  const refRe = new RegExp('\\b' + base + '(\\.[0-9a-f]{8})?\\.' + ext, 'g');
   for(const rf of REFS){
     const p = path.join(ROOT, rf);
     const s = fs.readFileSync(p, 'utf8');
