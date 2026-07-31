@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../public');   // kořen webu — vše, co se nasazuje, žije v public/
 
 const BASES = ['audio', 'statsview'];                            // spravované sdílené skripty
 const REFS = ['index.html', 'stats.html', 'sounds.html', 'sw.js'];   // kde se na ně odkazuje

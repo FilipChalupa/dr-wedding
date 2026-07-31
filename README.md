@@ -6,8 +6,9 @@ stylizovaná do staré CRT televize 4:3.
 
 ## Spuštění
 
-Otevři [`index.html`](index.html) v prohlížeči (stačí dvojklik). Nic víc není potřeba —
-žádný server, žádné závislosti.
+Otevři [`public/index.html`](public/index.html) v prohlížeči (stačí dvojklik). Nic víc není
+potřeba — žádný server, žádné závislosti. (Ve složce [`public/`](public/) je vše, co se
+nasazuje na web; zbytek repa jsou nástroje a dokumentace.)
 
 Pro nejlepší zážitek klikni na **⛶ FULLSCREEN** (nebo stiskni `F`).
 
@@ -81,7 +82,7 @@ Statistiky si zobrazíš třemi způsoby:
 - tlačítkem **📊 STATISTIKY** pod televizí (mimo režim `?tv`),
 - **skrytým ovladačovým kombem přímo ve hře** (viz níže) — jediná cesta na fyzické
   televizi v režimu `?tv`, kde tlačítka nejsou,
-- otevřením samostatné stránky [`stats.html`](stats.html).
+- otevřením samostatné stránky [`stats.html`](public/stats.html).
 
 Nahoře je **celkový souhrn** napříč všemi dny (kolikrát vyhrál ženich/nevěsta, počet her,
 celkový a nejdelší čas). Níže jsou hry seskupené **po dnech** — šipkami *Novější / Starší*
@@ -126,7 +127,7 @@ worker i Cloudflare cachují každý soubor zvlášť). Po každé úpravě těc
 v HTML i `sw.js`.
 
 > Service worker funguje jen přes http(s) nebo `localhost` (ne přes `file://`). Vyzkoušet se
-> dá lokálně: `python3 -m http.server` ve složce hry, otevřít `http://localhost:8000/`,
+> dá lokálně: `python3 -m http.server` ve složce `public/`, otevřít `http://localhost:8000/`,
 > načíst jednou online a pak v DevTools zapnout *Offline* (nebo vypnout server) — hra se
 > načte dál.
 
@@ -158,7 +159,7 @@ Počítačový soupeř se řídí hodnotící funkcí `aiEval` a třemi konstant
 
 Chování AI se nedá poznat od stolu ani z jedné odehrané partie — pár set tahů vypadá
 náhodně a člověk si k tomu snadno vymyslí špatné vysvětlení. Proto je v repu měřicí
-harness [`tools/ai-sim.js`](tools/ai-sim.js): načte `index.html` do Node s podstrčeným
+harness [`tools/ai-sim.js`](tools/ai-sim.js): načte `public/index.html` do Node s podstrčeným
 DOM, odsimuluje celé partie a vypíše tvrdá čísla (jak kapsle pokládá, jak maže viry,
 jak si zasypává starosti a jak je silná).
 
@@ -169,7 +170,7 @@ ADJ=50 node tools/ai-sim.js        # zkus jinou hodnotu bez editace kódu
 VPEN=0 HW=1 node tools/ai-sim.js   # chování před laděním AI
 
 # porovnání se starší verzí
-git show HEAD~5:index.html > /tmp/old.html && node tools/ai-sim.js /tmp/old.html
+git show HEAD~5:public/index.html > /tmp/old.html && node tools/ai-sim.js /tmp/old.html
 ```
 
 > Čísla mají šum. Rozdíl pod ~0,3 zbylého viru při 80 partiích neznamená nic —
@@ -193,7 +194,7 @@ Ani jeden z předchozích testů nesáhne na `updatePlayer()`, kde žije **záme
 
 ```bash
 node tools/lock-delay-test.js               # aktuální verze, start (95) i max (22)
-node tools/lock-delay-test.js /tmp/old.html # porovnej se starší verzí (git show HEAD^:index.html)
+node tools/lock-delay-test.js /tmp/old.html # porovnej se starší verzí (git show HEAD^:public/index.html)
 ```
 
 > „Visí u dna" je přesně ta prodleva, kvůli které lidé ucukávali (mysleli, že už ovládají
@@ -214,7 +215,7 @@ node tools/render-smoke.js
 
 ## Technické
 
-Vše je v jediném souboru [`index.html`](index.html) — HTML, CSS i JavaScript (vanilla,
+Vše je v jediném souboru [`public/index.html`](public/index.html) — HTML, CSS i JavaScript (vanilla,
 `<canvas>`). Žádné externí knihovny, žádné fonty z internetu, funguje i offline.
 Vykreslování běží v PAL rozlišení 720×576 (vnitřní herní souřadnice 320×240 se škálují
 nahoru), zobrazené v poměru 4:3 jako na staré televizi.

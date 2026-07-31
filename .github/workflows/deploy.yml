@@ -24,16 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Poskládej jen soubory webu (bez .git, .github, README apod.)
-      - name: Assemble site
-        run: |
-          mkdir -p _site
-          cp index.html stats.html sounds.html audio.js statsview.js sw.js \
-             manifest.webmanifest icon.svg CNAME _site/
-
+      # Nasazuje se celá složka public/ — co patří na web, žije tam (bez .git, .github, README apod.)
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: public
       - id: deployment
         uses: actions/deploy-pages@v4

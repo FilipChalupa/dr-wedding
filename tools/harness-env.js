@@ -12,7 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../public');   // kořen webu — vše, co se nasazuje, žije v public/
 const noop = () => {};
 
 const ctxTarget = {
