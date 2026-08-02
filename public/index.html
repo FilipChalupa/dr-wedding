@@ -195,8 +195,9 @@
   /* Ztmavení okolí při pauze/odpočtu/konci hry: canvas si ztmavuje sám (i s texty
      nad tím), okolí dorovná tahle celoplošná vrstva POD herní plochou.
      --tv-dim nastavuje herní smyčka na stejné hodnoty, jaké kreslí canvas. */
+  /* bez transition: canvas ztmavuje skokem (fillRect), okolí musí skočit v témže snímku */
   #tvDim { display:none; position:fixed; inset:0; pointer-events:none;
-    background:rgba(6,8,20,var(--tv-dim,0)); transition:background .25s; }
+    background:rgba(6,8,20,var(--tv-dim,0)); }
   body.tvmode #tvDim { display:block; }
   /* easter egg flip180 točí obraz stejným transformem → v ?tv režimu složit obojí */
   body.tvmode.flip180 .screen { transform:translate(var(--ov-x,0px), var(--ov-y,0px)) rotate(180deg); }
