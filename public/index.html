@@ -2060,10 +2060,11 @@ window.addEventListener('gamepaddisconnected', ()=>{
 
 //================= FULLSCREEN =================
 function toggleFull(){
-  if(TVMODE) return;   // ?tv: kiosk je celoobrazovkový sám; skříň je skrytá a fullscreenovat by nešla
-  const tv=document.getElementById('tv');
+  // ?tv: skříň je skrytá (display:none) a fullscreenovat by nešla — přes celou
+  // obrazovku se dá celý dokument, takže F funguje jako F11 (hodí se mimo kiosk)
+  const el = TVMODE ? document.documentElement : document.getElementById('tv');
   if(!document.fullscreenElement){
-    (tv.requestFullscreen||tv.webkitRequestFullscreen).call(tv);
+    (el.requestFullscreen||el.webkitRequestFullscreen).call(el);
   } else {
     (document.exitFullscreen||document.webkitExitFullscreen).call(document);
   }
