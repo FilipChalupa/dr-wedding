@@ -165,57 +165,23 @@
   :fullscreen.tv .controls, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
   :-webkit-full-screen.tv .controls, :-webkit-full-screen.tv .led, :-webkit-full-screen.tv::before { display:none; }
 
-  /* ---- ?tv : kiosk režim pro fyzickou televizi (skryje skříň + tlačítka) ---- */
-  /* přebytečnou plochu (jiný poměr stran) vyplň modrým pozadím hry, ne černou */
-  body.tvmode { background:linear-gradient(#1a2140,#0a0d1c); cursor:none; }
+  /* ---- ?tv : kiosk režim pro fyzickou televizi ---- */
+  /* Na televizi se nezobrazuje #game přímo: každý snímek se herní canvas překreslí
+     na celoobrazovkový #tvout i s pozadím, kalibrací overscanu (posun/zmenšení,
+     klávesa O v menu) a ztmavením okolí při pauze — jedna malba na jediném plátně,
+     takže obraz s pozadím vždy lícuje a mění se v témže snímku. Viz renderTV().
+     Falešné CRT efekty (scanlines, blikání, záře) se nekreslí: skutečná televize
+     je dělá sama a napodobené vrstvy by s reálnými řádky interferovaly (moiré). */
+  body.tvmode { background:#0a0d1c; cursor:none; }
   body.tvmode * { cursor:none; }
-  body.tvmode .controls { display:none; }
-  body.tvmode .tv {
-    width:100vw; height:100vh; padding:0; border:0; border-radius:0;
-    background:linear-gradient(#1a2140,#0a0d1c); box-shadow:none;
-    display:flex; align-items:center; justify-content:center;
+  body.tvmode .tv { display:none; }   /* celá skříň vč. #game — ten se dál kreslí, jen skrytě */
+  #tvout { display:none; }
+  body.tvmode #tvout {
+    display:block; position:fixed; inset:0; width:100vw; height:100vh;
+    image-rendering:pixelated; image-rendering:crisp-edges;
   }
-  body.tvmode .tv::before, body.tvmode .led { display:none; }
-  /* --ov-scale/--ov-x/--ov-y = kalibrace overscanu (klávesa O v menu). CRT kvůli
-     overscanu ukusuje ~5–10 % na každé straně a střed mívá posunutý i do stran,
-     takže obraz zmenšíme a posuneme do viditelné zóny. Hodnoty se ladí přímo na
-     televizi a ukládají do localStorage — viz KALIBRACE OVERSCANU ve skriptu. */
-  body.tvmode .screen {
-    width:min(calc(100vw * var(--ov-scale,0.92)), calc(133.333vh * var(--ov-scale,0.92)));
-    height:auto;
-    border-radius:0;
-    box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pozadí */
-    transform:translate(var(--ov-x,0px), var(--ov-y,0px));
-    z-index:1;         /* nad ztmavovací vrstvou #tvDim */
-  }
-  /* Na skutečné CRT televizi se řádky, blikání i záře dějí samy od sebe — falešné
-     vrstvy by se po škálování kalibrace tloukly s reálnými řádky (moiré) a hlavně:
-     bez nich kreslí canvas i okolí týž čistý gradient, takže pozadí přesně lícuje. */
-  body.tvmode .scanlines, body.tvmode .flicker, body.tvmode .glow { display:none; }
-  /* Ztmavení okolí při pauze/odpočtu/konci hry: canvas si ztmavuje sám (i s texty
-     nad tím), okolí dorovná tahle celoplošná vrstva POD herní plochou.
-     --tv-dim nastavuje herní smyčka na stejné hodnoty, jaké kreslí canvas. */
-  /* bez transition: canvas ztmavuje skokem (fillRect), okolí musí skočit v témže snímku */
-  #tvDim { display:none; position:fixed; inset:0; pointer-events:none;
-    background:rgba(6,8,20,var(--tv-dim,0)); }
-  body.tvmode #tvDim { display:block; }
-  /* easter egg flip180 točí obraz stejným transformem → v ?tv režimu složit obojí */
-  body.tvmode.flip180 .screen { transform:translate(var(--ov-x,0px), var(--ov-y,0px)) rotate(180deg); }
 
-  /* ---- režim kalibrace overscanu: nápověda + rámeček s úhlopříčným křížem
-     z rohu do rohu — i když rohy vyčuhují mimo televizi, směr čar prozradí,
-     kudy se za nimi vydat */
-  body.ovcal .screen::after {
-    content:''; position:absolute; inset:0; z-index:14; pointer-events:none;
-    border:3px solid rgba(248,215,126,.9);
-    background:
-      linear-gradient(to top right,
-        transparent calc(50% - 1.5px), rgba(248,215,126,.75) calc(50% - 1.5px),
-        rgba(248,215,126,.75) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
-      linear-gradient(to bottom right,
-        transparent calc(50% - 1.5px), rgba(248,215,126,.75) calc(50% - 1.5px),
-        rgba(248,215,126,.75) calc(50% + 1.5px), transparent calc(50% + 1.5px));
-  }
+  /* ---- nápověda režimu kalibrace overscanu (rámeček a kříž kreslí renderTV) ---- */
   #ovHint {
     display:none; position:fixed; left:50%; top:63%; transform:translate(-50%,-50%);
     z-index:30; text-align:center; max-width:min(90vw,720px); line-height:1.6;
@@ -290,8 +256,9 @@
     <div class="led"></div>
   </div>
 
-  <!-- ?tv: ztmavení okolí herní plochy při pauze/odpočtu/konci hry (viz #tvDim ve stylech) -->
-  <div id="tvDim"></div>
+  <!-- ?tv: celoobrazovkový výstup — herní canvas se sem každý snímek překreslí
+       i s pozadím a ztmavením okolí (viz renderTV) -->
+  <canvas id="tvout"></canvas>
 
   <!-- Nápověda kalibrace overscanu: mimo .screen (overflow:hidden by ji při zmenšení
        rámu ořízl), ukotvená poblíž středu viewportu, který televize nikdy neukusuje -->
@@ -315,27 +282,21 @@ if(TVMODE) document.body.classList.add('tvmode');
 // CRT kvůli overscanu ukusuje okraje a střed obrazu mívá posunutý i do stran,
 // takže pevný URL parametr nestačí. Ladí se to proto přímo na televizi: O v menu
 // otevře kalibraci — myš posouvá střed, ↑/↓ nebo kolečko mění velikost rámu,
-// Enter/O uloží do localStorage, Esc změny zahodí. Hra hodnoty čte přes CSS
-// proměnné --ov-x/--ov-y/--ov-scale (viz body.tvmode .screen ve stylech).
+// Enter/O uloží do localStorage, Esc změny zahodí. Hodnoty čte renderTV() níže.
 const OV_KEY='drwedding-overscan';
-const ov={x:0, y:0, scale:0.92};             // výchozí zmenšení = dřívějších 92 % rámu
+const ov={x:0, y:0, scale:0.92};             // výchozí zmenšení = 92 % viditelné plochy
 let ovCal=false, ovBackup=null;
-function ovApply(){
+function ovClamp(){
   ov.scale=Math.min(1.2, Math.max(0.5, ov.scale));
   ov.x=Math.max(-innerWidth*0.4,  Math.min(innerWidth*0.4,  ov.x));
   ov.y=Math.max(-innerHeight*0.4, Math.min(innerHeight*0.4, ov.y));
-  const s=document.documentElement.style;
-  s.setProperty('--ov-x', ov.x+'px');
-  s.setProperty('--ov-y', ov.y+'px');
-  s.setProperty('--ov-scale', ov.scale);
-  fitBackground();                           // pruhy pozadí drží krok s posunutou plochou
 }
 if(TVMODE){
   try{
     const v=JSON.parse(localStorage.getItem(OV_KEY)||'null');
     if(v && isFinite(v.x) && isFinite(v.y) && isFinite(v.scale)){ ov.x=v.x; ov.y=v.y; ov.scale=v.scale; }
   }catch(e){ console.warn('Kalibraci overscanu se nepodařilo načíst:', e); }
-  ovApply();
+  ovClamp();
 }
 function ovOpen(){
   ovBackup={...ov};
@@ -348,24 +309,77 @@ function ovClose(save){
     catch(e){ console.warn('Kalibraci overscanu se nepodařilo uložit:', e); }
   } else Object.assign(ov, ovBackup);
   ovBackup=null; ovCal=false; document.body.classList.remove('ovcal');
-  ovApply(); Snd.menu();
+  Snd.menu();
 }
 function ovReset(){                          // R: zahoď kalibraci úplně → výchozí hodnoty
   try{ localStorage.removeItem(OV_KEY); }
   catch(e){ console.warn('Kalibraci overscanu se nepodařilo smazat:', e); }
   Object.assign(ov, {x:0, y:0, scale:0.92});
   ovBackup=null; ovCal=false; document.body.classList.remove('ovcal');
-  ovApply(); Snd.menu();
+  Snd.menu();
 }
 window.addEventListener('mousemove', e=>{
   if(!ovCal) return;
-  ov.x+=e.movementX; ov.y+=e.movementY; ovApply();
+  ov.x+=e.movementX; ov.y+=e.movementY; ovClamp();
 });
 window.addEventListener('wheel', e=>{
   if(!ovCal) return;
   e.preventDefault();
-  ov.scale-=e.deltaY*0.0004; ovApply();
+  ov.scale-=e.deltaY*0.0004; ovClamp();
 }, {passive:false});
+
+//================= VÝSTUP NA TELEVIZI (?tv → #tvout) =================
+// Herní canvas (#game, 720×576) se nezobrazuje přímo: každý snímek se překreslí
+// na celoobrazovkový #tvout — pozadí, hra v obdélníku podle kalibrace i ztmavení
+// okolí vznikají jednou malbou na jednom plátně, takže na sebe vždy přesně
+// navazují a mění se v témže snímku (žádná synchronizace canvas vs. CSS).
+const tvout = document.getElementById('tvout');
+const tvctx = TVMODE ? tvout.getContext('2d') : null;
+function renderTV(nowMs){
+  const dpr = window.devicePixelRatio||1;
+  const vw = Math.round(innerWidth*dpr), vh = Math.round(innerHeight*dpr);
+  if(tvout.width!==vw || tvout.height!==vh){ tvout.width=vw; tvout.height=vh; }
+  const g = tvctx;
+  g.setTransform(1,0,0,1,0,0);
+  g.imageSmoothingEnabled = false;           // nearest-neighbor jako dřívější CSS pixelated
+  // obdélník hry: 4:3 vepsaný do obrazovky, zmenšený a posunutý podle kalibrace
+  const w = Math.min(vw, vh*4/3)*ov.scale, h = w*3/4;
+  const x = (vw-w)/2 + ov.x*dpr, y = (vh-h)/2 + ov.y*dpr;
+  // pozadí: týž gradient, jaký si hra kreslí uvnitř, zarovnaný na obdélník hry
+  // (nad ním drží krajní barvu, pod ním taky — gradient se za stopy neroztahuje);
+  // easter egg flip180 = obraz vzhůru nohama → prohodit barvy, ať na sebe navazují
+  const c1 = flipMode ? '#0a0d1c' : '#1a2140', c2 = flipMode ? '#1a2140' : '#0a0d1c';
+  const grad = g.createLinearGradient(0, y, 0, y+h);
+  grad.addColorStop(0,c1); grad.addColorStop(1,c2);
+  g.fillStyle = grad; g.fillRect(0,0,vw,vh);
+  // hra (při flip180 otočená kolem svého středu, stejně jako dřív CSS transform)
+  if(flipMode){
+    g.save();
+    g.translate(x+w/2, y+h/2); g.rotate(Math.PI); g.translate(-(x+w/2), -(y+h/2));
+  }
+  g.drawImage(cv, x, y, w, h);
+  if(flipMode) g.restore();
+  // ztmavení okolí (pauza/odpočet/konec hry): hra si vnitřek ztmavila sama v tomto
+  // snímku, okolí dostane tutéž barvu — kreslí se jen mimo obdélník hry (evenodd)
+  const dim = mode==='over' ? 0.82
+            : mode==='play' && paused ? 0.62
+            : mode==='play' && nowMs<countdownEnd ? 0.45 : 0;
+  if(dim>0){
+    g.beginPath(); g.rect(0,0,vw,vh); g.rect(x,y,w,h);
+    g.fillStyle='rgba(6,8,20,'+dim+')'; g.fill('evenodd');
+  }
+  // kalibrace: zlatý rámeček + kříž z rohu do rohu (směr k rohům, co vyčuhují mimo)
+  if(ovCal){
+    g.strokeStyle='#f8d77e'; g.lineWidth=3*dpr;
+    g.strokeRect(x+1.5*dpr, y+1.5*dpr, w-3*dpr, h-3*dpr);
+    g.lineWidth=2*dpr; g.globalAlpha=0.75;
+    g.beginPath();
+    g.moveTo(x,y); g.lineTo(x+w,y+h);
+    g.moveTo(x+w,y); g.lineTo(x,y+h);
+    g.stroke();
+    g.globalAlpha=1;
+  }
+}
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -1742,7 +1756,6 @@ function drawOver(){
 // Vykresluje se jednou za snímek; vstup se čte jednou za snímek.
 let prevT=null, tAcc=0; const STEP=1000/60;
 let lastFrameErr=0;                         // throttling logu chyb (ať nespamuje konzoli)
-let tvDimNow=0;                             // aktuální --tv-dim (?tv), ať se styl nesahá každý snímek
 function frame(now){
   // Celá smyčka je v try/catch: jednorázová výjimka v logice/kreslení nesmí shodit
   // requestAnimationFrame níže — jinak by kiosk navždy zamrzl a na akci to nikdo nerozchodí.
@@ -1772,13 +1785,7 @@ function frame(now){
     else if(mode==='over') drawOver();
     // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
     if(toastTimer>0 && mode!=='stats') drawToast();   // přípitek přes aktuální obrazovku
-    // ?tv: okolí herní plochy ztmavuj stejně, jako si canvas ztmavuje obraz sám
-    if(TVMODE){
-      const dim = mode==='over' ? 0.82
-                : mode==='play' && paused ? 0.62
-                : mode==='play' && now<countdownEnd ? 0.45 : 0;
-      if(dim!==tvDimNow){ tvDimNow=dim; document.documentElement.style.setProperty('--tv-dim', dim); }
-    }
+    if(TVMODE) renderTV(now);   // ?tv: překresli hotový snímek na celoobrazovkový #tvout
   }catch(err){
     if(now-lastFrameErr>2000){ lastFrameErr=now; console.error('Chyba ve smyčce hry (pokračuji dál):', err); }
   }
@@ -1811,8 +1818,8 @@ window.addEventListener('keydown', e=>{
   noteInput();                                  // jakákoli klávesa = vstup (reset idle časovače)
   audioInit();                                  // jakákoli klávesa = gesto → rozběhni/obnov zvuk
   if(ovCal){                                    // kalibrace overscanu polyká všechny klávesy
-    if(e.code==='ArrowUp'){ ov.scale+=0.005; ovApply(); }
-    else if(e.code==='ArrowDown'){ ov.scale-=0.005; ovApply(); }
+    if(e.code==='ArrowUp'){ ov.scale+=0.005; ovClamp(); }
+    else if(e.code==='ArrowDown'){ ov.scale-=0.005; ovClamp(); }
     else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='KeyO'){ if(!e.repeat) ovClose(true); }
     else if(e.code==='KeyR'){ if(!e.repeat) ovReset(); }
     else if(e.code==='Escape') ovClose(false);
@@ -2044,14 +2051,14 @@ function toggleFull(){
     (document.exitFullscreen||document.webkitExitFullscreen).call(document);
   }
 }
-// Ve fullscreenu / ?tv režimu slaď pozadí okolo herní plochy s jejím gradientem,
+// Ve fullscreenu (mimo ?tv, kde vše kreslí renderTV) slaď pozadí okolo herní plochy s jejím gradientem,
 // aby na jiném poměru stran nevznikl ostrý předěl: nad plochou plná světlá, pod
 // plochou plná tmavá, uvnitř stejný přechod jako v canvasu (#1a2140 → #0a0d1c).
 function fitBackground(){
+  if(document.body.classList.contains('tvmode')) return;   // ?tv: pozadí kreslí renderTV na #tvout
   const tv=document.getElementById('tv');
-  const inTV = document.body.classList.contains('tvmode');
   const inFS = !!(document.fullscreenElement||document.webkitFullscreenElement);
-  if(!inTV && !inFS){ tv.style.background=''; document.body.style.background=''; return; }   // normální režim → nech skříň
+  if(!inFS){ tv.style.background=''; document.body.style.background=''; return; }   // normální režim → nech skříň
   const sc=document.querySelector('.screen').getBoundingClientRect();
   const top=Math.max(0,Math.round(sc.top)), bot=Math.round(sc.bottom);
   // easter egg flip180: obraz je vzhůru nohama (světlá strana dole) → otoč i pozadí
