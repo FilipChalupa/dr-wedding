@@ -301,6 +301,7 @@ if(TVMODE){
 function ovOpen(){
   ovBackup={...ov};
   ovCal=true; document.body.classList.add('ovcal');
+  pendingStart=null;   // zruš odložený start z ovladače — jinak by hra odstartovala „pod" kalibrací
   Snd.menu();
 }
 function ovClose(save){
@@ -581,7 +582,9 @@ function unlockHardcore(){
   tone(140,0.30,{type:'sawtooth',vol:0.16,slideTo:70});   // hrozivé „odemykací" zavrčení
 }
 function pollMenuEgg(){
-  if(mode!=='menu'){ rightHoldFrames=0; return; }
+  // během kalibrace overscanu nečíhat na eggy: držení šipky doprava (5 s) by
+  // odemklo hardcore a obraz by se uprostřed kalibrace i sám narovnával z flipu
+  if(mode!=='menu' || ovCal){ rightHoldFrames=0; return; }
   if(flipMode && performance.now()>=flipDeadline) unflip();   // v menu se obraz po 10 s nečinnosti narovná
   if(keyHeld['ArrowRight']||keyHeld['KeyD']||menuPadRight){
     if(++rightHoldFrames>=HARDCORE_HOLD_FRAMES) unlockHardcore();   // držení doprava > 5 s
