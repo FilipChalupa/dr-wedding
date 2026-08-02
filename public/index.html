@@ -321,11 +321,12 @@ function ovReset(){                          // R: zahoď kalibraci úplně → 
 }
 window.addEventListener('mousemove', e=>{
   if(!ovCal) return;
+  noteInput();                               // aktivita — ať kalibraci nezavře idle časovač
   ov.x+=e.movementX; ov.y+=e.movementY; ovClamp();
 });
 window.addEventListener('wheel', e=>{
   if(!ovCal) return;
-  e.preventDefault();
+  e.preventDefault(); noteInput();
   ov.scale-=e.deltaY*0.0004; ovClamp();
 }, {passive:false});
 
@@ -1792,6 +1793,9 @@ function frame(now){
       steps++;
     }
     if(mode!=='menu' && now-lastInputAt>IDLE_MS) idleToMenu();   // dlouhá nečinnost → zpět do menu
+    // zapomenutá kalibrace by kiosk zablokovala (polyká klávesy, gamepady v menu stojí)
+    // → po stejné době nečinnosti se sama zavře bez uložení
+    if(ovCal && now-lastInputAt>IDLE_MS) ovClose(false);
     if(mode==='menu') drawMenu();
     else if(mode==='play') drawPlay();
     else if(mode==='over') drawOver();
@@ -2056,6 +2060,7 @@ window.addEventListener('gamepaddisconnected', ()=>{
 
 //================= FULLSCREEN =================
 function toggleFull(){
+  if(TVMODE) return;   // ?tv: kiosk je celoobrazovkový sám; skříň je skrytá a fullscreenovat by nešla
   const tv=document.getElementById('tv');
   if(!document.fullscreenElement){
     (tv.requestFullscreen||tv.webkitRequestFullscreen).call(tv);
