@@ -74,6 +74,25 @@ zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 > Tip: ovládat menu i start jde čistě z klávesnice (`1`/`2`, `Enter`), takže v `?tv` režimu
 > nejsou tlačítka potřeba. Na dotykovém displeji lze menu odbavit i klepnutím na obraz.
 
+### Kalibrace overscanu (klávesa `O`)
+
+CRT televize kvůli overscanu ukusuje okraje obrazu a střed mívá posunutý i do stran —
+každý kus jinak. Proto se obraz kalibruje **přímo na televizi**: v menu (jen v režimu
+`?tv`) zmáčkni **`O`**. Kolem herní plochy se ukáže zlatý rámeček s úhlopříčným křížem
+z rohu do rohu (když roh vyčuhuje mimo obrazovku, směr čáry prozradí, kde ho hledat)
+a nápověda ovládání. Pak:
+
+- **myší** posouváš střed obrazu,
+- **`↑` / `↓`** nebo **kolečkem myši** obraz zvětšuješ/zmenšuješ,
+- **`Enter`** nebo **`O`** nastavení uloží a vrátí tě do menu,
+- **`Esc`** změny zahodí a vrátí poslední uložený stav,
+- **`R`** kalibraci úplně vyresetuje na výchozí hodnoty (a smaže ji z úložiště).
+
+Cílem je srovnat rámeček tak, aby jeho okraje jen tak tak lícovaly s viditelnou plochou
+televize. Hodnoty se ukládají do **localStorage** (klíč `drwedding-overscan`), takže
+kalibrace přežije reload i restart kiosku — váže se ale na konkrétní prohlížeč a zařízení.
+Bez kalibrace se obraz zmenší na výchozích 92 % (bezpečná rezerva pro běžné CRT).
+
 ## Statistiky
 
 Každá dohraná hra se automaticky ukládá do prohlížeče (localStorage) — kdy začala, jak
