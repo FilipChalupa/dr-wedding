@@ -270,7 +270,7 @@
     <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>Esc / Start</b> zpět do hry</div>
   </div>
 
-<script src="audio.becf0777.js"></script>
+<script src="audio.ca465784.js"></script>
 <script src="statsview.5ee1c382.js"></script>
 <script>
 //================= SETUP =================
@@ -409,7 +409,7 @@ const OPP = {U:'D',D:'U',L:'R',R:'L'};
 const I = (r,c)=> r*COLS+c;
 
 //================= HUDBA: napojení na stav hry =================
-// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.becf0777.js.
+// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.ca465784.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
 musicShouldPlay = () => mode==='play' && !paused && performance.now()>=countdownEnd;   // až po odpočtu 3·2·1
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
@@ -1259,7 +1259,7 @@ function update(){
   const cdRem = countdownEnd - performance.now();
   if(cdRem > 0){
     const num = Math.min(3, Math.ceil(cdRem/1000));           // 3·2·1, každé celou sekundu
-    if(num!==lastCdNum){ lastCdNum=num; Snd.count(false); }   // pípnutí 3·2·1
+    if(num!==lastCdNum){ lastCdNum=num; Snd.count(false, num===3?0.08:0); }   // pípnutí 3·2·1 („3" s odstupem od startovního gesta)
     return;
   }
   if(lastCdNum>0){ lastCdNum=0; Snd.count(true); musicStart(); }   // start! vyšší pípnutí + rozjeď hudbu
@@ -1902,7 +1902,7 @@ window.addEventListener('keydown', e=>{
   }
   if(mode==='over'){
     if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky i z výherní obrazovky
-    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
+    if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'||e.code==='Escape'){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     return;
   }
   if(mode==='stats'){
@@ -1982,7 +1982,7 @@ function pollGamepads(){
   const bothToast = muteHeld>=2, toastEdge = bothToast && !toastPrev;
   // toastPrev nastav DŘÍV, než se cokoli spustí: kdyby zvuk/animace vyhodily výjimku,
   // hrana by jinak platila každý krok znovu → smyčka by padala pořád dokola a hra
-  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.becf0777.js bez Snd.toast).
+  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.ca465784.js bez Snd.toast).
   toastPrev = bothToast;
   if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
   if(mode==='menu' && toastEdge){ toastTimer=TOAST_FRAMES; audioInit(); Snd.toast(); }

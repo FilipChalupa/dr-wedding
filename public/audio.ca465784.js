@@ -84,7 +84,10 @@ const Snd = {
       toneAt(notes[steps-1], t+steps*0.07, 0.34, {type:'sawtooth', vol:0.16, slideTo:notes[steps-1]*0.75});  // závěrečné zavrčení
     }
   },
-  count(go){ tone(go?900:440,0.12,{type:'square',vol:0.13}); },
+  // when = odklad v sekundách: první pípnutí odpočtu se plánuje v témže tiku jako
+  // gesto, které hru spustilo (a případně teprve budí AudioContext) — bez odkladu
+  // ho prohlížeč umí spolknout, takže „3" cinkne s malým odstupem
+  count(go, when=0){ tone(go?900:440,0.12,{type:'square',vol:0.13,when}); },
   die(){   // krátký smutný sestup při úmrtí — zazní ještě před výherní znělkou
     if(muted||!actx) return;
     const t=actx.currentTime;
