@@ -117,7 +117,8 @@ překryv ho záměrně nemá, aby na svatbě nešlo statistiky omylem smazat.
 
 ### Skryté combo pro statistiky (kiosk)
 
-Aby na statistiky běžný host nenarazil, otevírají se v menu **skrytým kombem**:
+Aby na statistiky běžný host nenarazil, otevírají se **skrytým kombem** (funguje v menu
+i na výherní obrazovce; zavření vrátí tam, odkud se otevřely):
 
 - **Ovladač:** podrž **`Select`** a **5× po sobě** zmáčkni **`Start`** (každý stisk 1–4
   cvakne, pátý otevře; když `Select` pustíš, počítadlo se vynuluje).

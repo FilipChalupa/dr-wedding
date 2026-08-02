@@ -471,6 +471,7 @@ const ANO_FRAMES = 70;
 let glassTimer = [0,0];                   // jeden hráč drží L1/R1 → nakrátko se ukáže jen jeho sklenička (bez cinknutí)
 const GLASS_FRAMES = 16;
 let overStartFrame = 0;                   // snímek, kdy naskočila výherní obrazovka (kytice se hodí jen jednou)
+let virusFreezeFrame = 0;                 // snímek konce hry — starosti v něm zamrznou (přestanou se hýbat)
 let pendingStart = null;                 // {ai,deadline,by} — po stisku startu krátce čekej, jestli se přidá druhý (pak „Ano")
 const ANO_WINDOW = 14;                   // snímků okna „v rámci krátkého okamžiku"
 let padCount = 0;                        // připojených ovladačů (počítá pollGamepads)
@@ -950,6 +951,7 @@ function endGame(p,res){
   if(ending || mode==='over') return;
   paused=false;
   ending=true;                               // na chvíli zamrzni, pak výherní obrazovka
+  virusFreezeFrame=frameCount;               // starosti se od teď přestanou hýbat
   freezeEnd=performance.now()+FREEZE_MS;
   if(res==='draw'){ isDraw=true; winner=null; }   // remíza — bez vítěze
   else {
@@ -1301,11 +1303,13 @@ function bgScreen(){
 function drawCell(x,y,cell){
   const p=PAL[cell.color];
   if(cell.kind==='virus'){
-    // živá starost: pohupování, občasné mrknutí a koukání do stran (fáze podle pozice, ať nedělají naráz)
+    // živá starost: pohupování, občasné mrknutí a koukání do stran (fáze podle pozice, ať nedělají naráz);
+    // po konci hry (závěrečné zamrznutí i výherní obrazovka) strnou v poslední póze
+    const fc = (ending || mode==='over') ? virusFreezeFrame : frameCount;
     const ph = x*13 + y*7;
-    const wob = Math.sin(frameCount*0.08 + ph*0.3)*0.5;        // jemné pohupování
-    const blink = Math.sin(frameCount*0.045 + ph) > 0.95;      // občasné mrknutí
-    const look = Math.round(Math.sin(frameCount*0.03 + ph*0.5))*0.7;   // koukání vlevo/vpravo
+    const wob = Math.sin(fc*0.08 + ph*0.3)*0.5;        // jemné pohupování
+    const blink = Math.sin(fc*0.045 + ph) > 0.95;      // občasné mrknutí
+    const look = Math.round(Math.sin(fc*0.03 + ph*0.5))*0.7;   // koukání vlevo/vpravo
     y += wob;
     ctx.fillStyle=p.d; rr(x+1.5,y+1.5,CELL-3,CELL-3,4); ctx.fill();
     ctx.fillStyle=p.c; rr(x+2.5,y+2.5,CELL-5,CELL-5,3); ctx.fill();
@@ -1897,6 +1901,7 @@ window.addEventListener('keydown', e=>{
     return;
   }
   if(mode==='over'){
+    if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky i z výherní obrazovky
     if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='Space'){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     return;
   }
@@ -2032,6 +2037,15 @@ function pollGamepads(){
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
       if(hit('confirm')||hit('face')) menuStartPress(pIdx);   // Start i kterékoli ze 4 otáčecích tlačítek; oba naráz = „Ano" místo hry
     } else if(mode==='over'){
+      // skryté kombo statistik (drž Select, 5× Start) funguje i na výherní obrazovce;
+      // musí mít přednost, protože Start je zároveň 'confirm' (návrat do menu)
+      if(cur.back && hit('start')){
+        audioInit();
+        if(++statsComboPresses>=5){ statsComboPresses=0; openStats(); }
+        else Snd.menu();
+        padPrev[slot]=cur; continue;
+      }
+      if(!cur.back && prev.back) statsComboPresses=0;
       if(hit('confirm')){ stopAllSound(); swapMode=false; unflip(); mode='menu'; }   // ukonči znělku + zruš eastereggy
     } else if(mode==='stats'){
       if(hit('confirm')||hit('start')||hit('back')) closeStats();   // A / Start / Select = zpět do hry
@@ -2168,16 +2182,18 @@ function saveGame(rec){
 // Statistiky lze zobrazit jako overlay přímo ve hře (kiosk / ovladače) i na samostatné
 // stránce stats.html — obojí vykresluje sdílený statsview.5ee1c382.js.
 let statsCtl = null;
+let statsFrom = 'menu';                     // odkud se statistiky otevřely (menu / výherní obrazovka)
 const statsOverlay = document.getElementById('statsOverlay');
 function openStats(){
-  if(mode!=='menu') return;                 // otevírá se jen z menu
+  if(mode!=='menu' && mode!=='over') return;   // z menu i z výherní obrazovky
+  statsFrom = mode;
   statsCtl = StatsView.mount(document.getElementById('statsInner'), {standalone:false});   // čerstvě z localStorage
   statsOverlay.classList.add('open'); statsOverlay.scrollTop=0;
   mode='stats'; audioInit(); Snd.menu();
 }
 function closeStats(){
   statsOverlay.classList.remove('open'); statsCtl=null;
-  mode='menu'; Snd.menu();
+  mode=statsFrom; Snd.menu();               // návrat tam, odkud se otevřely
 }
 function statsNext(){ if(statsCtl) statsCtl.next(); }      // ← na obrazovce „Starší ›" (starší den)
 function statsPrev(){ if(statsCtl) statsCtl.prev(); }      // ← „‹ Novější" (novější den)
