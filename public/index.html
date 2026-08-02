@@ -159,7 +159,7 @@
     border-radius:0; box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
   }
   /* bez tmavé viněty na okraji, ať se plocha nerozchází s okolními pruhy (jen jemná modrá záře) */
-  :fullscreen.tv .glow, :-webkit-full-screen.tv .glow, body.tvmode .glow {
+  :fullscreen.tv .glow, :-webkit-full-screen.tv .glow {
     background:radial-gradient(circle at 50% 42%, rgba(120,160,255,.06), transparent 60%);
   }
   :fullscreen.tv .controls, :fullscreen.tv .led, :fullscreen.tv::before { display:none; }
@@ -184,9 +184,20 @@
     width:min(calc(100vw * var(--ov-scale,0.92)), calc(133.333vh * var(--ov-scale,0.92)));
     height:auto;
     border-radius:0;
-    box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
+    box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pozadí */
     transform:translate(var(--ov-x,0px), var(--ov-y,0px));
+    z-index:1;         /* nad ztmavovací vrstvou #tvDim */
   }
+  /* Na skutečné CRT televizi se řádky, blikání i záře dějí samy od sebe — falešné
+     vrstvy by se po škálování kalibrace tloukly s reálnými řádky (moiré) a hlavně:
+     bez nich kreslí canvas i okolí týž čistý gradient, takže pozadí přesně lícuje. */
+  body.tvmode .scanlines, body.tvmode .flicker, body.tvmode .glow { display:none; }
+  /* Ztmavení okolí při pauze/odpočtu/konci hry: canvas si ztmavuje sám (i s texty
+     nad tím), okolí dorovná tahle celoplošná vrstva POD herní plochou.
+     --tv-dim nastavuje herní smyčka na stejné hodnoty, jaké kreslí canvas. */
+  #tvDim { display:none; position:fixed; inset:0; pointer-events:none;
+    background:rgba(6,8,20,var(--tv-dim,0)); transition:background .25s; }
+  body.tvmode #tvDim { display:block; }
   /* easter egg flip180 točí obraz stejným transformem → v ?tv režimu složit obojí */
   body.tvmode.flip180 .screen { transform:translate(var(--ov-x,0px), var(--ov-y,0px)) rotate(180deg); }
 
@@ -277,6 +288,9 @@
     </div>
     <div class="led"></div>
   </div>
+
+  <!-- ?tv: ztmavení okolí herní plochy při pauze/odpočtu/konci hry (viz #tvDim ve stylech) -->
+  <div id="tvDim"></div>
 
   <!-- Nápověda kalibrace overscanu: mimo .screen (overflow:hidden by ji při zmenšení
        rámu ořízl), ukotvená poblíž středu viewportu, který televize nikdy neukusuje -->
@@ -1727,6 +1741,7 @@ function drawOver(){
 // Vykresluje se jednou za snímek; vstup se čte jednou za snímek.
 let prevT=null, tAcc=0; const STEP=1000/60;
 let lastFrameErr=0;                         // throttling logu chyb (ať nespamuje konzoli)
+let tvDimNow=0;                             // aktuální --tv-dim (?tv), ať se styl nesahá každý snímek
 function frame(now){
   // Celá smyčka je v try/catch: jednorázová výjimka v logice/kreslení nesmí shodit
   // requestAnimationFrame níže — jinak by kiosk navždy zamrzl a na akci to nikdo nerozchodí.
@@ -1756,6 +1771,13 @@ function frame(now){
     else if(mode==='over') drawOver();
     // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
     if(toastTimer>0 && mode!=='stats') drawToast();   // přípitek přes aktuální obrazovku
+    // ?tv: okolí herní plochy ztmavuj stejně, jako si canvas ztmavuje obraz sám
+    if(TVMODE){
+      const dim = mode==='over' ? 0.82
+                : mode==='play' && paused ? 0.62
+                : mode==='play' && now<countdownEnd ? 0.45 : 0;
+      if(dim!==tvDimNow){ tvDimNow=dim; document.documentElement.style.setProperty('--tv-dim', dim); }
+    }
   }catch(err){
     if(now-lastFrameErr>2000){ lastFrameErr=now; console.error('Chyba ve smyčce hry (pokračuji dál):', err); }
   }

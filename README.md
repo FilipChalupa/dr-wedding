@@ -71,6 +71,10 @@ V tomto režimu se **skryjí všechny extra prvky** — hnědá retro skříň t
 plochu obrazovky (zachová poměr stran 4:3, zbytek je černý). Hra se tak na fyzické televizi
 zobrazí jako čistá celoobrazovková aplikace bez rušivých webových prvků.
 
+Vypnuté jsou i **falešné CRT efekty** (scanlines, blikání, záře) — skutečná televize je
+dělá sama a napodobené vrstvy by se s reálnými řádky tloukly (moiré). Pozadí okolo herní
+plochy díky tomu barevně navazuje na obraz hry a ztmavuje se s ním i při pauze či konci hry.
+
 > Tip: ovládat menu i start jde čistě z klávesnice (`1`/`2`, `Enter`), takže v `?tv` režimu
 > nejsou tlačítka potřeba. Na dotykovém displeji lze menu odbavit i klepnutím na obraz.
 
