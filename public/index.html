@@ -513,7 +513,7 @@ const LOCK_DELAY = 16, LOCK_DELAY_SOFT = 3;
 // pádu nestihla dojet. Hardcore má strop nižší, ať zůstane svižná.
 const AI_PACE_USE = 0.5, AI_PACE_MAX = 11, AI_PACE_MAX_HARD = 5;
 const VIRUS_LEVELS = [8,14,24,38,56];   // počet starostí pro úrovně 1..5 (rostoucí krok: +6,+10,+14,+18)
-const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
+const COUNTDOWN_MS = 3000;              // 3 · 2 · 1, každé po celé sekundě
 // pád kapsle: snímků na jedno políčko — start pomalý, zrychluje skokově.
 // DROP_GRACE = úvodní vteřiny bez zrychlování; pak každých DROP_EVERY s ubere DROP_STEP snímků.
 const DROP_START = 95, DROP_MIN = 22, DROP_STEP = 6, DROP_EVERY = 22, DROP_GRACE = 15;
@@ -1258,8 +1258,7 @@ function update(){
   }
   const cdRem = countdownEnd - performance.now();
   if(cdRem > 0){
-    const elapsed = COUNTDOWN_MS - cdRem;
-    const num = elapsed < 500 ? 3 : elapsed < 1500 ? 2 : 1;
+    const num = Math.min(3, Math.ceil(cdRem/1000));           // 3·2·1, každé celou sekundu
     if(num!==lastCdNum){ lastCdNum=num; Snd.count(false); }   // pípnutí 3·2·1
     return;
   }
@@ -1664,8 +1663,7 @@ function drawPlay(hideSide){
 
   const cdRem = countdownEnd - performance.now();
   if(mode==='play' && cdRem>0){
-    const elapsed = COUNTDOWN_MS - cdRem;
-    const num = elapsed < 500 ? 3 : elapsed < 1500 ? 2 : 1;   // 3:0,5s · 2:1s · 1:1s
+    const num = Math.min(3, Math.ceil(cdRem/1000));           // 3·2·1, každé celou sekundu
     ctx.fillStyle='rgba(6,8,20,0.45)'; ctx.fillRect(0,0,W,H);
     T('PŘIPRAVTE SE', W/2, H/2-26, 11, '#cba6ec', 'center', true);
     T(''+num, W/2, H/2+30, 60, '#f8d77e', 'center', true);
