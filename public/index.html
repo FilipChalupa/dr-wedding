@@ -853,15 +853,35 @@ function lock(p){
   if(!p.ai) Snd.lock();
   startResolve(p);
 }
+// Výběr sloupců pro smetí: náhodně, ale rozprostřeně — kombinace s co NEJMÉNĚ
+// sousedícími dvojicemi (do 4 kousků to vyjde vždy úplně bez sousedů; u více už
+// se sousedům na 8 sloupcích nejde vyhnout, tak se jich vybere co nejmíň).
+// Mezi rovnocennými kombinacemi se losuje a pořadí přiřazení se zamíchá.
+function garbageCols(n){
+  const need=Math.min(n,COLS);
+  let best=[], bestAdj=Infinity;
+  for(let m=0;m<(1<<COLS);m++){          // bitmapa vybraných sloupců (256 možností)
+    let cnt=0, adj=0;
+    for(let c=0;c<COLS;c++) if(m>>c&1) cnt++;
+    if(cnt!==need) continue;
+    for(let c=0;c<COLS-1;c++) if((m>>c&3)===3) adj++;   // dva sousední bity = sousedící sloupce
+    if(adj<bestAdj){ bestAdj=adj; best=[m]; }
+    else if(adj===bestAdj) best.push(m);
+  }
+  const m=best[(Math.random()*best.length)|0];
+  const pick=[]; for(let c=0;c<COLS;c++) if(m>>c&1) pick.push(c);
+  for(let i=pick.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [pick[i],pick[j]]=[pick[j],pick[i]]; }
+  return pick;
+}
 function dropGarbage(p){
   const q=p.pendingGarbage; p.pendingGarbage=[];
-  // každý kousek do jiného sloupce (zamíchané pořadí); barva odpovídá zničené linii
-  const cols=[]; for(let c=0;c<COLS;c++) cols.push(c);
-  for(let i=cols.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [cols[i],cols[j]]=[cols[j],cols[i]]; }
+  if(!q.length) return;
+  // každý kousek do jiného sloupce, rozprostřeně po desce; barva odpovídá zničené linii
+  const cols=garbageCols(q.length);
   q.forEach((color, k)=>{
     // kousek cílí právě na svůj sloupec — plné nepřeskakujeme (padne-li shodná barva na vysoký
     // sloupec, může doplnit linii a odblokovat ho). Jen když je sloupec plný až nahoru, propadne.
-    const c=cols[k%COLS];
+    const c=cols[k%cols.length];
     let r=0; while(r<ROWS && p.grid[I(r,c)]) r++;
     if(r<ROWS) p.grid[I(r,c)] = {color, kind:'pill', partner:null};
   });
