@@ -95,7 +95,7 @@ a nápověda ovládání. Pak:
 Cílem je srovnat rámeček tak, aby jeho okraje jen tak tak lícovaly s viditelnou plochou
 televize. Hodnoty se ukládají do **localStorage** (klíč `drwedding-overscan`), takže
 kalibrace přežije reload i restart kiosku — váže se ale na konkrétní prohlížeč a zařízení.
-Bez kalibrace se obraz zmenší na výchozích 92 % (bezpečná rezerva pro běžné CRT).
+Bez kalibrace se obraz kreslí v plné velikosti.
 
 ## Statistiky
 
