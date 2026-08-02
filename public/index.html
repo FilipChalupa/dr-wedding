@@ -1784,7 +1784,7 @@ function drawOver(){
     const DUR=150, bt=frameCount-overStartFrame;
     if(bt>=0 && bt<=DUR){
       const tt=bt/DUR;
-      const arcX=t=>182+(138-182)*t, arcY=t=>150-115*Math.sin(Math.PI*t);   // 182→138, apex ~y35
+      const arcX=t=>182+(272-182)*t, arcY=t=>150-115*Math.sin(Math.PI*t);   // 182→272 (doprava, „za sebe"), apex ~y35
       const petalCols=['#ef5f93','#ffb3cf','#a25ddc','#ffffff'];
       for(let k=6;k>=1;k--){                                 // vlečka lístků za kyticí (dozadu v čase)
         const pt=tt-k*0.05; if(pt<0||pt>1) continue;
