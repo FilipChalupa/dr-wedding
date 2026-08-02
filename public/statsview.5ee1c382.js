@@ -61,8 +61,12 @@
     function draw(){
       if(!order.length) return;
       const key=order[page], rows=groups.get(key);
-      let wL=0,wR=0,dCount=0,ai=0,total=0;
-      for(const g of rows){ if(g.winner==='L') wL++; else if(g.winner==='R') wR++; else dCount++; if(g.vsAI) ai++; total+=g.durationMs; }
+      let wL=0,wR=0,dCount=0,ai=0,total=0,longest=0;
+      for(const g of rows){
+        if(g.winner==='L') wL++; else if(g.winner==='R') wR++; else dCount++;
+        if(g.vsAI) ai++; total+=g.durationMs;
+        if(g.durationMs>longest) longest=g.durationMs;
+      }
 
       const head='<h1>DR. WEDDING<small>STATISTIKY</small></h1>'+overall
         +'<div class="nav">'
@@ -74,7 +78,8 @@
         +'<div class="sum">'+rows.length+' '+plural(rows.length,'hra','hry','her')
         +' · ženich <b>'+wL+'×</b> · nevěsta <b>'+wR+'×</b>'
         +(dCount? ' · remízy <b>'+dCount+'×</b>' : '')
-        +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b></div>';
+        +' · vs počítač <b>'+ai+'×</b> · celkem odehráno <b>'+fmtDur(total)+'</b>'
+        +' · nejdelší hra <b>'+fmtDur(longest)+'</b></div>';
 
       let table='<table><thead><tr>'
         +'<th>Začátek</th><th class="dur">Trvání</th><th class="vir">Starosti</th><th>Režim</th>'
