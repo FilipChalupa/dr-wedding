@@ -123,8 +123,8 @@ vrátí tam, odkud se otevřely):
 - **Ovladač:** podrž **`Select`** a **5× po sobě** zmáčkni **`Start`** (každý stisk 1–4
   cvakne, pátý otevře; když `Select` pustíš, počítadlo se vynuluje). Funguje v menu
   a na výherní obrazovce (ve hře se Select/Start tlučou s pauzou).
-- **Klávesnice:** `Tab` — **kdykoliv**, i uprostřed hry (ta se přitom zapauzuje a po
-  zavření statistik zůstane v pauze).
+- **Klávesnice:** `Tab` — **kdykoliv**. Uprostřed hry rozehranou partii ukončí
+  (do statistik se nezapíše) a otevře statistiky.
 
 Statistiky se ukážou jako **překryv přes hru**. Ovládání uvnitř: **`←` / `→`** listuje dny,
 **`↑` / `↓`** roluje, **`A` / `Start` / `Select`** (nebo `Enter` / `Esc`) = zpět do hry.
