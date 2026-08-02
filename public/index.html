@@ -1641,16 +1641,16 @@ function drawPlay(hideSide){
     // poletující srdíčka (L1/R1 ve hře i kombo) od každé postavičky
     for(const p of players) for(const h of p.hearts){ ctx.globalAlpha=Math.min(1, h.life/18); heart(h.x, h.y, h.sz, h.col); }
     ctx.globalAlpha=1;
-    // hláška komba nad postavičkou autora: jemný text bez bubliny, pomalu stoupá a mizí
+    // hláška komba nad postavičkou autora: drobný text bez bubliny, pomalu stoupá a mizí
     for(const p of players){
       if(p.comboTimer<=0) continue;
       const a=Math.min(1, p.comboTimer/24);
       const msg=comboText(p.comboN, p.side);
-      let fs=9; ctx.font='bold '+fs+'px "Courier New",monospace';
-      while(fs>7 && ctx.measureText(msg).width > 76){ fs--; ctx.font='bold '+fs+'px "Courier New",monospace'; }
+      let fs=8; ctx.font='bold '+fs+'px "Courier New",monospace';
+      while(fs>6 && ctx.measureText(msg).width > 70){ fs--; ctx.font='bold '+fs+'px "Courier New",monospace'; }
       const tw=ctx.measureText(msg).width;
       const cx=Math.max(tw/2+2, Math.min(W-tw/2-2, p.side==='L' ? 34 : 286));   // dlouhý text neuteče za okraj
-      const y=50 - (70-p.comboTimer)*0.12;
+      const y=82 - (70-p.comboTimer)*0.12;   // těsně nad hlavou postavičky
       ctx.globalAlpha=a;
       T(msg, cx+1, y+1, fs, 'rgba(8,8,16,0.65)', 'center', true);   // měkký stín kvůli čitelnosti
       T(msg, cx, y, fs, '#f8d77e', 'center', true);
