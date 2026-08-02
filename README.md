@@ -34,7 +34,8 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Otočit    | `W`            | `↑`              |
 | Dolů      | `S`            | `↓`              |
 
-Pauza ve hře: `P` nebo `Esc` (klávesnice), **Start** (ovladač). Ukončení rozehrané hry: `Q` v pauze.
+Pauza ve hře: `P` nebo `Esc` (klávesnice), **Start** (ovladač). V pauze `P` pokračuje;
+`Q` nebo `Esc` hru ukončí zpět do menu.
 Zvuk i hudbu na pozadí zapnout/vypnout: `M` (volba se pamatuje).
 
 ### USB ovladače

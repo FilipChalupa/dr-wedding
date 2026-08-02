@@ -1678,7 +1678,7 @@ function drawPlay(hideSide){
     T('PAUZA', W/2, H/2-6, 28, '#f8d77e', 'center', true);
     if(padDropped) T('⚠ ODPOJEN OVLADAČ — připoj ho zpět', W/2, H/2-26, 8, '#ff9d5d', 'center', true);
     T((anyPad?'START':'P')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
-    T((anyPad?'SELECT':'Q')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
+    T((anyPad?'SELECT':'Q / Esc')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
     ctx.globalAlpha=1;
   }
 }
@@ -1918,11 +1918,12 @@ window.addEventListener('keydown', e=>{
   // play
   if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky i uprostřed hry (ukončí ji)
   if(ending) return;
-  if(e.code==='KeyP'||e.code==='Escape'){ togglePause(); return; }   // P i Esc = pauza (a zpět)
   if(paused){
-    if(e.code==='KeyQ') quitToMenu();   // ukončit hru → zpět do menu (jen Q, ať Esc jen pauzuje)
+    if(e.code==='KeyQ'||e.code==='Escape') quitToMenu();   // v pauze Q i Esc = konec, zpět do menu
+    else if(e.code==='KeyP') togglePause();                // P = pokračovat
     return;
   }
+  if(e.code==='KeyP'||e.code==='Escape'){ togglePause(); return; }   // ve hře P i Esc = pauza
   const p1=players[0], p2=players[1];
   const pa = p2.ai ? p1 : p2;   // šipky: v sólo hře ovládají člověka (p1)
   // soft drop (dolů) se čte průběžně z držené klávesy v updatePlayer; tady jen otočení + zákaz scrollu
