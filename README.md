@@ -117,12 +117,14 @@ překryv ho záměrně nemá, aby na svatbě nešlo statistiky omylem smazat.
 
 ### Skryté combo pro statistiky (kiosk)
 
-Aby na statistiky běžný host nenarazil, otevírají se **skrytým kombem** (funguje v menu
-i na výherní obrazovce; zavření vrátí tam, odkud se otevřely):
+Aby na statistiky běžný host nenarazil, otevírají se **skrytým kombem** (zavření vždy
+vrátí tam, odkud se otevřely):
 
 - **Ovladač:** podrž **`Select`** a **5× po sobě** zmáčkni **`Start`** (každý stisk 1–4
-  cvakne, pátý otevře; když `Select` pustíš, počítadlo se vynuluje).
-- **Klávesnice:** `Tab`.
+  cvakne, pátý otevře; když `Select` pustíš, počítadlo se vynuluje). Funguje v menu
+  a na výherní obrazovce (ve hře se Select/Start tlučou s pauzou).
+- **Klávesnice:** `Tab` — **kdykoliv**, i uprostřed hry (ta se přitom zapauzuje a po
+  zavření statistik zůstane v pauze).
 
 Statistiky se ukážou jako **překryv přes hru**. Ovládání uvnitř: **`←` / `→`** listuje dny,
 **`↑` / `↓`** roluje, **`A` / `Start` / `Select`** (nebo `Enter` / `Esc`) = zpět do hry.

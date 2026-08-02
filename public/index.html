@@ -1914,6 +1914,7 @@ window.addEventListener('keydown', e=>{
     return;
   }
   // play
+  if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky i uprostřed hry (zapauzuje)
   if(ending) return;
   if(e.code==='KeyP'){ togglePause(); return; }
   if(paused){
@@ -2185,7 +2186,8 @@ let statsCtl = null;
 let statsFrom = 'menu';                     // odkud se statistiky otevřely (menu / výherní obrazovka)
 const statsOverlay = document.getElementById('statsOverlay');
 function openStats(){
-  if(mode!=='menu' && mode!=='over') return;   // z menu i z výherní obrazovky
+  if(mode==='stats') return;
+  if(mode==='play') pauseGame();            // rozehraná hra se zapauzuje (po zavření zůstane v pauze)
   statsFrom = mode;
   statsCtl = StatsView.mount(document.getElementById('statsInner'), {standalone:false});   // čerstvě z localStorage
   statsOverlay.classList.add('open'); statsOverlay.scrollTop=0;
