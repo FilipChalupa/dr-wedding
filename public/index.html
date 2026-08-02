@@ -1677,7 +1677,7 @@ function drawPlay(hideSide){
     ctx.globalAlpha=Math.min(1, pauseDim/0.62);   // texty nabíhají spolu se ztmavením
     T('PAUZA', W/2, H/2-6, 28, '#f8d77e', 'center', true);
     if(padDropped) T('⚠ ODPOJEN OVLADAČ — připoj ho zpět', W/2, H/2-26, 8, '#ff9d5d', 'center', true);
-    T((anyPad?'START':'P')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
+    T((anyPad?'START':'P / mezerník')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
     T((anyPad?'SELECT':'Q / Esc')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
     ctx.globalAlpha=1;
   }
@@ -1920,7 +1920,7 @@ window.addEventListener('keydown', e=>{
   if(ending) return;
   if(paused){
     if(e.code==='KeyQ'||e.code==='Escape') quitToMenu();   // v pauze Q i Esc = konec, zpět do menu
-    else if(e.code==='KeyP') togglePause();                // P = pokračovat
+    else if(e.code==='KeyP'||e.code==='Space') togglePause();   // P i mezerník = pokračovat
     return;
   }
   if(e.code==='KeyP'||e.code==='Escape'){ togglePause(); return; }   // ve hře P i Esc = pauza
