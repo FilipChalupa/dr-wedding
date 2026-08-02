@@ -489,10 +489,11 @@ function flipScreen(){                  // stejné gesto obraz převrátí i zas
   else {
     flipMode = true; flipDeadline = performance.now() + 10000;
     document.body.classList.add('flip180');
+    fitBackground();                     // otoč i gradient pozadí okolo plochy
     tone(300,0.16,{type:'sawtooth',vol:0.13,slideTo:620});   // převrácení (vzestup)
   }
 }
-function unflip(){ flipMode=false; document.body.classList.remove('flip180'); }
+function unflip(){ flipMode=false; document.body.classList.remove('flip180'); fitBackground(); }
 
 // --- „Swap" easter egg (nahoře v menu 5× nahoru): prohození obleku/šatů + útok sám na sebe ---
 let swapMode = false;                  // prohozené oblečení + obrácené útoky; po dohrání se vypne
@@ -2007,7 +2008,9 @@ function fitBackground(){
   if(!inTV && !inFS){ tv.style.background=''; document.body.style.background=''; return; }   // normální režim → nech skříň
   const sc=document.querySelector('.screen').getBoundingClientRect();
   const top=Math.max(0,Math.round(sc.top)), bot=Math.round(sc.bottom);
-  const bg='linear-gradient(to bottom, #1a2140 0px, #1a2140 '+top+'px, #0a0d1c '+bot+'px, #0a0d1c 100%)';
+  // easter egg flip180: obraz je vzhůru nohama (světlá strana dole) → otoč i pozadí
+  const [c1,c2] = document.body.classList.contains('flip180') ? ['#0a0d1c','#1a2140'] : ['#1a2140','#0a0d1c'];
+  const bg='linear-gradient(to bottom, '+c1+' 0px, '+c1+' '+top+'px, '+c2+' '+bot+'px, '+c2+' 100%)';
   tv.style.background=bg;
   document.body.style.background=bg;
 }
