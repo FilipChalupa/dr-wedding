@@ -94,12 +94,12 @@ btn('endSnd','výhra (znělka)', ()=>Snd.win());
 
 // všechny skladby na pozadí (mapování na obtížnosti viz M_SONGS v audio skriptu)
 const playSong = k => { musicSelect(k); musicStop(); musicStart(); };
-btn('musicCtl','▶ F — osudová (0–1)',       ()=>playSong('f'),'ghost');
-btn('musicCtl','▶ B — kánon (2–3)',         ()=>playSong('b'),'ghost');
-btn('musicCtl','▶ A — svatební (4)',        ()=>playSong('a'),'ghost');
-btn('musicCtl','▶ C — valčík (5)',          ()=>playSong('c'),'ghost');
-btn('musicCtl','▶ D — toccata (6)',         ()=>playSong('d'),'ghost');
-btn('musicCtl','▶ E — hon (7)',             ()=>playSong('e'),'ghost');
+btn('musicCtl','▶ osudová (úroveň 0–1)',  ()=>playSong('f'),'ghost');
+btn('musicCtl','▶ kánon (úroveň 2–3)',    ()=>playSong('b'),'ghost');
+btn('musicCtl','▶ svatební (úroveň 4)',   ()=>playSong('a'),'ghost');
+btn('musicCtl','▶ valčík (úroveň 5)',     ()=>playSong('c'),'ghost');
+btn('musicCtl','▶ toccata (úroveň 6)',    ()=>playSong('d'),'ghost');
+btn('musicCtl','▶ hon (úroveň 7)',        ()=>playSong('e'),'ghost');
 btn('musicCtl','■ zastavit hudbu', ()=>musicStop(),'ghost');
 btn('musicCtl','▶ hudba pauzy',    ()=>pauseMusicStart(),'ghost');
 btn('musicCtl','■ stop pauzy',     ()=>pauseMusicStop(),'ghost');
