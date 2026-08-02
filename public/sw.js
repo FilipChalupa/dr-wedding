@@ -6,8 +6,8 @@
 // *je*, ale je mrtvá, network first čeká na timeout u každého souboru → pomalý start.
 // Cache first je okamžitý a na síti vůbec nezávisí; novou verzi si vyzvedne na pozadí.
 // (Funguje jen při hostování přes http(s) nebo localhost, ne přes file://.)
-const CACHE = 'dr-wedding-v11';
-const ASSETS = ['./', 'index.html', 'stats.html', 'sounds.html', 'audio.caef19bf.js', 'statsview.5ee1c382.js', 'manifest.webmanifest', 'icon.svg'];
+const CACHE = 'dr-wedding-v12';
+const ASSETS = ['./', 'index.html', 'stats.html', 'sounds.html', 'audio.becf0777.js', 'statsview.5ee1c382.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e=>{
   self.skipWaiting();                                  // nová verze SW se aktivuje hned

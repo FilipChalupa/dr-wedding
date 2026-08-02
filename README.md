@@ -21,7 +21,7 @@ nebo svisle) a smažou se i s „starostmi" (svatební breberky). Kdo první vy�
 sklenice všechny starosti, **vyhrává**. Komba posílají soupeři do sklenice smetí navíc.
 
 Před každým kolem proběhne odpočet **3·2·1**, nad sklenicí je vidět **náhled další kapsle**
-a hru lze kdykoli **pozastavit** (klávesa `P` nebo tlačítko Start na ovladači).
+a hru lze kdykoli **pozastavit** (klávesa `P` či `Esc`, nebo tlačítko Start na ovladači).
 
 Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 
@@ -34,7 +34,7 @@ Barvy: 🟣 fialová · 🟡 zlatá (šampaňské) · 🩷 růžová.
 | Otočit    | `W`            | `↑`              |
 | Dolů      | `S`            | `↓`              |
 
-Pauza ve hře: `P` (klávesnice) nebo **Start** (ovladač).
+Pauza ve hře: `P` nebo `Esc` (klávesnice), **Start** (ovladač). Ukončení rozehrané hry: `Q` v pauze.
 Zvuk i hudbu na pozadí zapnout/vypnout: `M` (volba se pamatuje).
 
 ### USB ovladače

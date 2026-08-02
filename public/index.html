@@ -270,7 +270,7 @@
     <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>Esc / Start</b> zpět do hry</div>
   </div>
 
-<script src="audio.caef19bf.js"></script>
+<script src="audio.becf0777.js"></script>
 <script src="statsview.5ee1c382.js"></script>
 <script>
 //================= SETUP =================
@@ -409,7 +409,7 @@ const OPP = {U:'D',D:'U',L:'R',R:'L'};
 const I = (r,c)=> r*COLS+c;
 
 //================= HUDBA: napojení na stav hry =================
-// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.caef19bf.js.
+// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.becf0777.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
 musicShouldPlay = () => mode==='play' && !paused;
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
@@ -512,7 +512,7 @@ const LOCK_DELAY = 16, LOCK_DELAY_SOFT = 3;
 // hry (řádek za 95 snímků) čekala mezi otočkami vteřiny; bez podílu by naopak při rychlém
 // pádu nestihla dojet. Hardcore má strop nižší, ať zůstane svižná.
 const AI_PACE_USE = 0.5, AI_PACE_MAX = 11, AI_PACE_MAX_HARD = 5;
-const VIRUS_LEVELS = [8,12,16,22,30];   // počet starostí pro úrovně 1..5
+const VIRUS_LEVELS = [8,14,24,38,56];   // počet starostí pro úrovně 1..5 (rostoucí krok: +6,+10,+14,+18)
 const COUNTDOWN_MS = 2500;              // 3 (0,5 s) + 2 (1 s) + 1 (1 s)
 // pád kapsle: snímků na jedno políčko — start pomalý, zrychluje skokově.
 // DROP_GRACE = úvodní vteřiny bez zrychlování; pak každých DROP_EVERY s ubere DROP_STEP snímků.
@@ -1198,8 +1198,8 @@ function startGame(ai){
   lastCdNum=0;
   audioInit();                             // start je gesto uživatele → rozběhni zvuk
   mode='play';
-  // hudba podle obtížnosti: 0–2 rozšířená svatební, 3–5 kánon, hardcore valčík
-  musicSelect(level<=2 ? 'a' : level<=5 ? 'b' : 'c');
+  // hudba podle obtížnosti (viz M_SONGS v audio skriptu)
+  musicSelect({0:'f',1:'f',2:'b',3:'b',4:'a',5:'c',6:'d',7:'e'}[level] || 'a');
   musicStop(); musicStart();               // hudba na pozadí (hraje i během odpočtu)
 }
 function dropIntervalNow(){
@@ -1918,9 +1918,9 @@ window.addEventListener('keydown', e=>{
   // play
   if(e.code==='Tab'){ e.preventDefault(); openStats(); return; }   // Tab = statistiky i uprostřed hry (ukončí ji)
   if(ending) return;
-  if(e.code==='KeyP'){ togglePause(); return; }
+  if(e.code==='KeyP'||e.code==='Escape'){ togglePause(); return; }   // P i Esc = pauza (a zpět)
   if(paused){
-    if(e.code==='KeyQ'||e.code==='Escape') quitToMenu();   // ukončit hru → zpět do menu
+    if(e.code==='KeyQ') quitToMenu();   // ukončit hru → zpět do menu (jen Q, ať Esc jen pauzuje)
     return;
   }
   const p1=players[0], p2=players[1];
@@ -1983,7 +1983,7 @@ function pollGamepads(){
   const bothToast = muteHeld>=2, toastEdge = bothToast && !toastPrev;
   // toastPrev nastav DŘÍV, než se cokoli spustí: kdyby zvuk/animace vyhodily výjimku,
   // hrana by jinak platila každý krok znovu → smyčka by padala pořád dokola a hra
-  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.caef19bf.js bez Snd.toast).
+  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.becf0777.js bez Snd.toast).
   toastPrev = bothToast;
   if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
   if(mode==='menu' && toastEdge){ toastTimer=TOAST_FRAMES; audioInit(); Snd.toast(); }

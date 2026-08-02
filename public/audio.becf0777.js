@@ -141,16 +141,20 @@ const Snd = {
 };
 
 // ================= GENEROVANÁ HUDBA NA POZADÍ =================
-// Chiptune sekvencer s předstihovým plánováním (lookahead). Tři skladby podle
+// Chiptune sekvencer s předstihovým plánováním (lookahead). Šest skladeb podle
 // obtížnosti — vybírá musicSelect() z index.html při startu hry:
-//   'a' rozšířená svatební (AABA, 16 taktů)  → úrovně 0–2
-//   'b' kánon (pachelbelovská procesí)       → úrovně 3–5
-//   'c' slavnostní valčík (3/4)              → hardcore 6–7
+//   'f' osudová (d moll, těžká)        → úrovně 0–1
+//   'b' kánon (pachelbelovská procesí) → úrovně 2–3
+//   'a' rozšířená svatební (AABA)      → úroveň 4
+//   'c' slavnostní valčík (3/4)        → úroveň 5
+//   'd' bouřková toccata (a moll)      → hardcore 6
+//   'e' hon (e moll, pumpující basa)   → super-hardcore 7
 function midiHz(m){ return 440*Math.pow(2,(m-69)/12); }
 // akordy: basa (MIDI) + tóny pro arpeggio/stab
 const CH_C ={bass:36,ch:[60,64,67]}, CH_F ={bass:41,ch:[60,65,69]}, CH_Am={bass:45,ch:[57,60,64]},
       CH_G ={bass:43,ch:[59,62,67]}, CH_Dm={bass:38,ch:[62,65,69]}, CH_Em={bass:40,ch:[59,64,67]},
-      CH_E ={bass:40,ch:[59,64,68]};
+      CH_E ={bass:40,ch:[59,64,68]}, CH_B7={bass:35,ch:[59,63,66]}, CH_D ={bass:38,ch:[62,66,69]},
+      CH_A ={bass:45,ch:[57,61,64]}, CH_Gm={bass:43,ch:[62,67,70]}, CH_Bb={bass:46,ch:[58,62,65]};
 const M_SONGS = {
   a:{ tempo:116, barLen:8, waltz:false,      // rozšířená svatební: sloka · odpověď · most · finále
     prog:[CH_C,CH_F,CH_Am,CH_G, CH_C,CH_F,CH_Am,CH_G, CH_Dm,CH_G,CH_Em,CH_Am, CH_F,CH_G,CH_C,CH_G],
@@ -181,6 +185,36 @@ const M_SONGS = {
           77,0,81,0,77,0, 76,0,72,0,76,0, 74,0,77,0,74,0, 71,0,74,0,79,0,
           81,0,77,0,72,0, 76,0,79,0,84,0, 83,0,79,0,74,0, 76,0,72,0,76,0,
           77,0,76,0,74,0, 76,0,72,0,69,0, 74,0,71,0,74,0, 72,0,0,0,0,0] },
+  d:{ tempo:132, barLen:8, waltz:false,      // bouřková toccata (a moll + harmonická G#)
+    prog:[CH_Am,CH_F,CH_Dm,CH_E, CH_Am,CH_F,CH_Dm,CH_E, CH_Am,CH_G,CH_C,CH_E, CH_Dm,CH_Am,CH_E,CH_Am],
+    lead:[69,0,72,76, 81,0,79,76, 77,0,76,72, 69,0,72,0,
+          74,0,77,74, 69,0,74,77, 76,75,76,80, 83,0,80,76,
+          81,0,79,81, 84,0,81,79, 77,0,81,77, 72,0,77,81,
+          81,0,79,77, 74,0,77,0,  80,0,76,80, 83,80,76,71,
+          69,71,72,74, 76,0,72,76, 79,0,74,79, 83,0,79,74,
+          84,0,79,76, 72,0,76,79, 80,0,83,80, 76,0,71,68,
+          74,0,77,81, 86,0,81,77, 84,0,81,76, 72,0,76,81,
+          83,0,80,76, 75,0,76,80, 81,0,76,72, 69,0,57,0] },
+  e:{ tempo:144, barLen:8, waltz:false, drive:true,   // hon (e moll štvanice, basa pumpuje v osminách)
+    prog:[CH_Em,CH_C,CH_Am,CH_B7, CH_Em,CH_C,CH_Am,CH_B7, CH_G,CH_D,CH_Em,CH_B7, CH_C,CH_Am,CH_B7,CH_Em],
+    lead:[76,0,79,76, 71,0,76,79, 79,0,76,72, 76,0,72,67,
+          69,0,72,76, 81,0,76,72, 75,0,71,75, 78,0,75,71,
+          76,79,83,79, 76,0,79,83, 84,0,79,76, 72,0,76,79,
+          81,0,84,81, 76,0,81,84, 87,0,83,78, 75,0,78,83,
+          79,0,74,71, 67,0,71,74, 78,0,74,69, 66,0,69,74,
+          76,0,71,67, 64,0,67,71, 75,0,71,66, 63,0,66,71,
+          72,74,76,77, 79,0,76,72, 81,0,79,76, 72,0,76,79,
+          83,0,78,75, 71,0,75,78, 76,0,71,76, 79,76,71,64] },
+  f:{ tempo:100, barLen:8, waltz:false,      // osudová (d moll, pomalá a těžká)
+    prog:[CH_Dm,CH_Gm,CH_A,CH_Dm, CH_F,CH_Bb,CH_Gm,CH_A, CH_Dm,CH_C,CH_Bb,CH_A, CH_Dm,CH_Gm,CH_A,CH_Dm],
+    lead:[74,0,0,0, 77,0,74,0,  79,0,0,0, 74,0,70,0,
+          73,0,0,0, 76,0,73,0,  74,0,0,0, 0,0,69,0,
+          77,0,0,0, 81,0,77,0,  82,0,0,0, 77,0,74,0,
+          79,0,74,0, 70,0,74,0, 73,0,76,0, 81,0,0,0,
+          86,0,0,0, 81,0,77,0,  84,0,79,0, 76,0,79,0,
+          82,0,77,0, 74,0,77,0, 81,0,76,0, 73,0,69,0,
+          74,77,81,77, 74,0,86,0, 79,0,82,79, 74,0,79,0,
+          81,0,73,76, 69,0,73,76, 74,0,0,0, 62,0,0,0] },
 };
 let musicSongKey = 'a';
 function musicSelect(k){ if(M_SONGS[k]) musicSongKey = k; }   // volá index.html při startu hry
@@ -204,6 +238,9 @@ function musicStep(song, step, t){
       toneAt(midiHz(chord.ch[0]), t, 0.12, {type:'square', vol:0.03});
       toneAt(midiHz(chord.ch[2]), t, 0.12, {type:'square', vol:0.03});
     }
+  } else if(song.drive){                     // štvanice: basa pumpuje v osminách, arpeggio jen přizvukuje
+    if((beat&1)===0) toneAt(midiHz(chord.bass), t, 0.20, {type:'triangle', vol:0.14});
+    if(beat===1||beat===5){ const n=chord.ch[(beat>>1)%chord.ch.length]; toneAt(midiHz(n), t, 0.14, {type:'square', vol:0.04}); }
   } else {                                   // 4/4: basa na těžké doby, arpeggio na sudé
     if(beat===0 || beat===4) toneAt(midiHz(chord.bass), t, 0.36, {type:'triangle', vol:0.15});
     if((beat&1)===0){ const n=chord.ch[(beat>>1)%chord.ch.length]; toneAt(midiHz(n), t, 0.16, {type:'square', vol:0.045}); }
