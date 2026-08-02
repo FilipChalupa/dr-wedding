@@ -176,15 +176,30 @@
     display:flex; align-items:center; justify-content:center;
   }
   body.tvmode .tv::before, body.tvmode .led { display:none; }
-  /* --tv-safe = jaká část rámu je na televizi doopravdy vidět (0.92 = 92 %).
-     CRT kvůli overscanu ukusuje ~5–10 % na každé straně, takže obraz zmenšíme
-     do bezpečné zóny — jinak se ořízne titulek. Ladí se z URL: ?tv&safe=90 */
+  /* --ov-scale/--ov-x/--ov-y = kalibrace overscanu (klávesa O v menu). CRT kvůli
+     overscanu ukusuje ~5–10 % na každé straně a střed mívá posunutý i do stran,
+     takže obraz zmenšíme a posuneme do viditelné zóny. Hodnoty se ladí přímo na
+     televizi a ukládají do localStorage — viz KALIBRACE OVERSCANU ve skriptu. */
   body.tvmode .screen {
-    width:min(calc(100vw * var(--tv-safe,0.92)), calc(133.333vh * var(--tv-safe,0.92)));
+    width:min(calc(100vw * var(--ov-scale,0.92)), calc(133.333vh * var(--ov-scale,0.92)));
     height:auto;
     border-radius:0;
     box-shadow:none;   /* bez tmavého okraje → modrá plynule navazuje na pruhy */
+    transform:translate(var(--ov-x,0px), var(--ov-y,0px));
   }
+  /* easter egg flip180 točí obraz stejným transformem → v ?tv režimu složit obojí */
+  body.tvmode.flip180 .screen { transform:translate(var(--ov-x,0px), var(--ov-y,0px)) rotate(180deg); }
+
+  /* ---- režim kalibrace overscanu: zvýrazněný okraj plochy + nápověda ---- */
+  body.ovcal .screen { outline:3px solid #f8d77e; outline-offset:-3px; }
+  #ovHint {
+    display:none; position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
+    z-index:15; white-space:nowrap;
+    font-family:'Courier New',monospace; font-weight:bold; font-size:clamp(11px,1.8vh,17px);
+    color:#f8d77e; background:rgba(8,8,16,.82); border:1px solid rgba(248,215,126,.5);
+    border-radius:1vh; padding:.9vh 1.6vh; letter-spacing:.05vh;
+  }
+  body.ovcal #ovHint { display:block; }
 
   /* ==== Overlay statistik (sdílí vzhled se stats.html, ovládá se gamepadem) ==== */
   #statsOverlay {
@@ -240,6 +255,7 @@
       <div class="glow"></div>
       <div class="flicker"></div>
       <div class="crton"><div class="crton-beam"></div></div>
+      <div id="ovHint">myš = posun středu &nbsp;·&nbsp; ↑ ↓ / kolečko = velikost &nbsp;·&nbsp; Enter/O = uložit &nbsp;·&nbsp; Esc = zrušit</div>
     </div>
     <div class="controls">
       <button id="btnStart" title="Start / zpět do menu">▶</button>
@@ -262,17 +278,57 @@
 <script>
 //================= SETUP =================
 // ?tv -> kiosk režim pro fyzickou televizi (bez skříně a tlačítek)
-// ?safe=90 -> doladí underscan proti overscanu televize (kolik % rámu je vidět).
-//   100 = plný rám (jako dřív), níž = menší obraz. Kolik přesně ubrat se od stolu
-//   neuhádne, každá CRT ukusuje jinak — proto se to ladí z URL, ne v kódu.
-{
-  const q = new URLSearchParams(location.search);
-  if(q.has('tv')){
-    document.body.classList.add('tvmode');
-    const safe = parseFloat(q.get('safe'));
-    if(safe >= 50 && safe <= 100) document.documentElement.style.setProperty('--tv-safe', safe/100);
-  }
+const TVMODE = new URLSearchParams(location.search).has('tv');
+if(TVMODE) document.body.classList.add('tvmode');
+
+//================= KALIBRACE OVERSCANU (?tv, klávesa O v menu) =================
+// CRT kvůli overscanu ukusuje okraje a střed obrazu mívá posunutý i do stran,
+// takže pevný URL parametr nestačí. Ladí se to proto přímo na televizi: O v menu
+// otevře kalibraci — myš posouvá střed, ↑/↓ nebo kolečko mění velikost rámu,
+// Enter/O uloží do localStorage, Esc změny zahodí. Hra hodnoty čte přes CSS
+// proměnné --ov-x/--ov-y/--ov-scale (viz body.tvmode .screen ve stylech).
+const OV_KEY='drwedding-overscan';
+const ov={x:0, y:0, scale:0.92};             // výchozí zmenšení = dřívějších 92 % rámu
+let ovCal=false, ovBackup=null;
+function ovApply(){
+  ov.scale=Math.min(1.2, Math.max(0.5, ov.scale));
+  ov.x=Math.max(-innerWidth*0.4,  Math.min(innerWidth*0.4,  ov.x));
+  ov.y=Math.max(-innerHeight*0.4, Math.min(innerHeight*0.4, ov.y));
+  const s=document.documentElement.style;
+  s.setProperty('--ov-x', ov.x+'px');
+  s.setProperty('--ov-y', ov.y+'px');
+  s.setProperty('--ov-scale', ov.scale);
+  fitBackground();                           // pruhy pozadí drží krok s posunutou plochou
 }
+if(TVMODE){
+  try{
+    const v=JSON.parse(localStorage.getItem(OV_KEY)||'null');
+    if(v && isFinite(v.x) && isFinite(v.y) && isFinite(v.scale)){ ov.x=v.x; ov.y=v.y; ov.scale=v.scale; }
+  }catch(e){ console.warn('Kalibraci overscanu se nepodařilo načíst:', e); }
+  ovApply();
+}
+function ovOpen(){
+  ovBackup={...ov};
+  ovCal=true; document.body.classList.add('ovcal');
+  Snd.menu();
+}
+function ovClose(save){
+  if(save){
+    try{ localStorage.setItem(OV_KEY, JSON.stringify(ov)); }
+    catch(e){ console.warn('Kalibraci overscanu se nepodařilo uložit:', e); }
+  } else Object.assign(ov, ovBackup);
+  ovBackup=null; ovCal=false; document.body.classList.remove('ovcal');
+  ovApply(); Snd.menu();
+}
+window.addEventListener('mousemove', e=>{
+  if(!ovCal) return;
+  ov.x+=e.movementX; ov.y+=e.movementY; ovApply();
+});
+window.addEventListener('wheel', e=>{
+  if(!ovCal) return;
+  e.preventDefault();
+  ov.scale-=e.deltaY*0.0004; ovApply();
+}, {passive:false});
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -1708,6 +1764,14 @@ window.addEventListener('keydown', e=>{
   keyHeld[e.code]=true;
   noteInput();                                  // jakákoli klávesa = vstup (reset idle časovače)
   audioInit();                                  // jakákoli klávesa = gesto → rozběhni/obnov zvuk
+  if(ovCal){                                    // kalibrace overscanu polyká všechny klávesy
+    if(e.code==='ArrowUp'){ ov.scale+=0.005; ovApply(); }
+    else if(e.code==='ArrowDown'){ ov.scale-=0.005; ovApply(); }
+    else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='KeyO'){ if(!e.repeat) ovClose(true); }
+    else if(e.code==='Escape') ovClose(false);
+    e.preventDefault(); return;
+  }
+  if(TVMODE && mode==='menu' && e.code==='KeyO' && !e.repeat){ ovOpen(); return; }
   if(e.code==='KeyF'){ toggleFull(); e.preventDefault(); return; }
   if(e.code==='KeyM'){ toggleMute(); updateMuteBtn(); return; }   // ztlumit / zapnout zvuk
 
@@ -1838,7 +1902,7 @@ function pollGamepads(){
     if(cur.up||cur.down||cur.left||cur.right||cur.confirm||cur.start||cur.back||cur.rotCW||cur.rotCCW||cur.mute) noteInput();   // aktivita na ovladači = vstup (reset idle časovače)
 
     if(hit('confirm')||hit('start')) audioInit();   // gesto na ovladači → rozběhni zvuk
-    if(mode==='menu'){
+    if(mode==='menu' && !ovCal){       // během kalibrace overscanu ovladače menu neovládají
       if(cur.mute && !bothToast && pIdx<2) glassTimer[pIdx]=GLASS_FRAMES;   // jen jeden drží L1/R1 → nakrátko jen jeho sklenička (bez cinknutí)
       // skryté kombo: drž Select a 5× po sobě zmáčkni Start → statistiky (aby to nikdo neudělal omylem)
       if(cur.back && hit('start')){
