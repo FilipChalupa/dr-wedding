@@ -359,11 +359,12 @@ function renderTV(nowMs){
   }
   g.drawImage(cv, x, y, w, h);
   if(flipMode) g.restore();
-  // ztmavení okolí (pauza/odpočet/konec hry): hra si vnitřek ztmavila sama v tomto
-  // snímku, okolí dostane tutéž barvu — kreslí se jen mimo obdélník hry (evenodd)
-  const dim = mode==='over' ? 0.82
-            : mode==='play' && paused ? 0.62
-            : mode==='play' && nowMs<countdownEnd ? 0.45 : 0;
+  // ztmavení okolí: hra si vnitřek ztmavila sama v tomto snímku, okolí dostane
+  // tutéž hodnotu — kreslí se jen mimo obdélník hry (evenodd). Odpočet a konec
+  // hry jsou skokové, pauza dojíždí plynule (pauseDim); když se vrstvy uvnitř
+  // potkají (pauza během odpočtu), skládají se průhlednosti stejně jako dva fillRect.
+  const instant = mode==='over' ? 0.82 : mode==='play' && nowMs<countdownEnd ? 0.45 : 0;
+  const dim = 1-(1-instant)*(1-pauseDim);
   if(dim>0){
     g.beginPath(); g.rect(0,0,vw,vh); g.rect(x,y,w,h);
     g.fillStyle='rgba(6,8,20,'+dim+')'; g.fill('evenodd');
@@ -482,6 +483,7 @@ let gameLogged = false;                 // zda už byla dohraná hra zapsána do
 let lastCdNum = 0;                       // poslední číslo odpočtu (pro pípnutí 3·2·1)
 let pausePrev = 0;                       // čas (ms) poslední pauza-snímku (pro zmrazení času)
 let paused = false;
+let pauseDim = 0;    // ztmavení pauzy: plynule dojíždí k 0.62 a zpět (kreslí ho hra i okolí v ?tv)
 let ending = false;                     // krátké zamrznutí po dohrání
 let freezeEnd = 0;                      // čas (ms) konce zamrznutí
 const FREEZE_MS = 900;
@@ -1638,12 +1640,16 @@ function drawPlay(hideSide){
     T('PŘIPRAVTE SE', W/2, H/2-26, 11, '#cba6ec', 'center', true);
     T(''+num, W/2, H/2+30, 60, '#f8d77e', 'center', true);
   }
+  if(mode==='play' && pauseDim>0){          // ztmavení dobíhá plynule i po zrušení pauzy
+    ctx.fillStyle='rgba(6,8,20,'+pauseDim+')'; ctx.fillRect(0,0,W,H);
+  }
   if(mode==='play' && paused){
-    ctx.fillStyle='rgba(6,8,20,0.62)'; ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=Math.min(1, pauseDim/0.62);   // texty nabíhají spolu se ztmavením
     T('PAUZA', W/2, H/2-6, 28, '#f8d77e', 'center', true);
     if(padDropped) T('⚠ ODPOJEN OVLADAČ — připoj ho zpět', W/2, H/2-26, 8, '#ff9d5d', 'center', true);
     T((anyPad?'START':'P')+' · pokračovat', W/2, H/2+16, 9, '#ffffff', 'center');
     T((anyPad?'SELECT':'Q')+' · konec (zpět do menu)', W/2, H/2+30, 8, '#cba6ec', 'center');
+    ctx.globalAlpha=1;
   }
 }
 
@@ -1776,6 +1782,9 @@ function frame(now){
       blinkGroom=decTimer(blinkGroom); blinkBride=decTimer(blinkBride);
       toastTimer=decTimer(toastTimer); anoTimer=decTimer(anoTimer);
       glassTimer[0]=decTimer(glassTimer[0]); glassTimer[1]=decTimer(glassTimer[1]);
+      // ztmavení pauzy plynule dojíždí (~¼ s); mimo hru skokem na nulu, ať po Q nedobliká
+      const pdT = (mode==='play' && paused) ? 0.62 : 0;
+      pauseDim = mode!=='play' ? 0 : Math.abs(pdT-pauseDim)<0.005 ? pdT : pauseDim+(pdT-pauseDim)*0.18;
       if(mode==='play') update();
       steps++;
     }
