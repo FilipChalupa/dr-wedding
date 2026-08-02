@@ -411,7 +411,7 @@ const I = (r,c)=> r*COLS+c;
 //================= HUDBA: napojení na stav hry =================
 // Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.becf0777.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
-musicShouldPlay = () => mode==='play' && !paused;
+musicShouldPlay = () => mode==='play' && !paused && performance.now()>=countdownEnd;   // až po odpočtu 3·2·1
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
   const span = DROP_START - DROP_MIN;
   return span>0 ? Math.max(0, Math.min(1, (DROP_START - dropIntervalNow())/span)) : 0;
@@ -1198,9 +1198,9 @@ function startGame(ai){
   lastCdNum=0;
   audioInit();                             // start je gesto uživatele → rozběhni zvuk
   mode='play';
-  // hudba podle obtížnosti (viz M_SONGS v audio skriptu)
+  // hudba podle obtížnosti (viz M_SONGS v audio skriptu); spustí se až po odpočtu (viz update)
   musicSelect({0:'f',1:'f',2:'b',3:'b',4:'a',5:'c',6:'d',7:'e'}[level] || 'a');
-  musicStop(); musicStart();               // hudba na pozadí (hraje i během odpočtu)
+  musicStop();
 }
 function dropIntervalNow(){
   // rychlost roste skokově: po odečtení grace každých DROP_EVERY sekund o DROP_STEP snímků
@@ -1263,7 +1263,7 @@ function update(){
     if(num!==lastCdNum){ lastCdNum=num; Snd.count(false); }   // pípnutí 3·2·1
     return;
   }
-  if(lastCdNum>0){ lastCdNum=0; Snd.count(true); }            // start! vyšší pípnutí
+  if(lastCdNum>0){ lastCdNum=0; Snd.count(true); musicStart(); }   // start! vyšší pípnutí + rozjeď hudbu
   for(const p of players) updatePlayer(p);
   for(const p of players){
     if(p.comboTimer>0) p.comboTimer--;
