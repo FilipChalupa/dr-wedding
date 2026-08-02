@@ -617,7 +617,7 @@ function newPlayer(side){
     dropTimer:0, lockTimer:0, padDrop:false, spawnGrace:0,   // padDrop = drží se dolů na ovladači; soft drop klávesnice se čte z keyHeld
     virusCount:0, pendingGarbage:[],
     busy:false, phase:'settle', phaseTimer:0, chains:0, gainCells:0, gainVir:0, gainGarbage:[],
-    flashes:[], comboTimer:0, comboN:0, animClear:0, landFx:null, hearts:[],   // hearts = poletující srdíčka (L1/R1 ve hře)
+    flashes:[], comboTimer:0, comboN:0, comboFrom:null, animClear:0, landFx:null, hearts:[],   // hearts = poletující srdíčka (L1/R1 ve hře); comboFrom = kdo poslal kombo (hláška se ukazuje příjemci)
     dead:false,                 // true = zaplácal láhev až nahoru → bliká celý obsah
     finishedOutcome:null,       // 'win' | 'dead' — jak hráč skončil (aby se to spustilo jen jednou)
     score:0,
@@ -941,7 +941,13 @@ function finishResolve(p){
     rumble(players.indexOf(o), {strong:0.9, weak:0.7, dur:130+garbage.length*30});   // náraz příjemci smetí
   }
   const comboLines = p.gainGarbage.length;   // kolik linií hráč v tahu smazal celkem (naráz i přes kaskády)
-  if(comboLines>1){ p.comboTimer=70; p.comboN=comboLines; Snd.combo(comboLines); }
+  if(comboLines>1){
+    // hláška („Mám tě rád"…) je vzkaz od autora komba — ukáže se PŘÍJEMCI smetí
+    // (ve swap módu letí smetí i vzkaz sám na sebe, stejně jako garbage výš)
+    const o = swapMode ? p : other(p);
+    o.comboTimer=70; o.comboN=comboLines; o.comboFrom=p.side;
+    Snd.combo(comboLines);
+  }
   p.score += p.gainCells*10 + p.gainVir*50;
   p.virusCount=countViruses(p.grid);
   if(p.virusCount===0) checkCleared(p);
@@ -1413,10 +1419,18 @@ function drawBoard(p,x0){
 
   if(p.comboTimer>0){
     const a=Math.min(1,p.comboTimer/20);
-    const msg=comboText(p.comboN, p.side);
+    const msg=comboText(p.comboN, p.comboFrom||p.side);
     let fs=11; ctx.font='bold '+fs+'px "Courier New",monospace';
     while(fs>7 && ctx.measureText(msg).width > BW-6){ fs--; ctx.font='bold '+fs+'px "Courier New",monospace'; }
-    T(msg, x0+BW/2, BY+BH/2, fs, 'rgba(248,215,126,'+a+')','center',true);
+    // tmavý štítek pod textem, ať hláška nesplývá s obsahem sklenice
+    const tw=ctx.measureText(msg).width, cx=x0+BW/2, cy=BY+BH/2;
+    ctx.globalAlpha=a;
+    ctx.fillStyle='rgba(8,8,16,0.8)';
+    rr(cx-tw/2-4, cy-fs-2, tw+8, fs+7, 3); ctx.fill();
+    ctx.strokeStyle='rgba(248,215,126,0.45)'; ctx.lineWidth=1;
+    rr(cx-tw/2-4, cy-fs-2, tw+8, fs+7, 3); ctx.stroke();
+    T(msg, cx, cy, fs, '#f8d77e','center',true);
+    ctx.globalAlpha=1;
   }
   if(p.pendingGarbage.length>0){
     // do vnějšího horního rohu, ať nepřekrývá nápis ŽENICH / NEVĚSTA uprostřed
