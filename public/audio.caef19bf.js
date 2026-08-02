@@ -141,22 +141,49 @@ const Snd = {
 };
 
 // ================= GENEROVANÁ HUDBA NA POZADÍ =================
-// Jednoduchý chiptune sekvencer s předstihovým plánováním (lookahead).
-// Veselá svatební progrese v C dur (8 taktů), basa + arpeggio + melodie.
+// Chiptune sekvencer s předstihovým plánováním (lookahead). Tři skladby podle
+// obtížnosti — vybírá musicSelect() z index.html při startu hry:
+//   'a' rozšířená svatební (AABA, 16 taktů)  → úrovně 0–2
+//   'b' kánon (pachelbelovská procesí)       → úrovně 3–5
+//   'c' slavnostní valčík (3/4)              → hardcore 6–7
 function midiHz(m){ return 440*Math.pow(2,(m-69)/12); }
-const M_TEMPO = 116;                         // BPM (osminové kroky)
-const M_PROG = [                             // 4 takty po 8 krocích = 32 kroků smyčka
-  {bass:36, ch:[60,64,67]},                  // C dur
-  {bass:41, ch:[60,65,69]},                  // F dur
-  {bass:45, ch:[57,60,64]},                  // a moll
-  {bass:43, ch:[59,62,67]},                  // G dur
-];
-const M_LEAD = [                             // melodie (osminy, 0 = pauza)
-  72,0,71,72, 76,0,74,72,
-  77,0,76,74, 72,0,69, 0,
-  72,0,76,79, 77,0,76,74,
-  74,0,72,71, 67,0,72, 0,
-];
+// akordy: basa (MIDI) + tóny pro arpeggio/stab
+const CH_C ={bass:36,ch:[60,64,67]}, CH_F ={bass:41,ch:[60,65,69]}, CH_Am={bass:45,ch:[57,60,64]},
+      CH_G ={bass:43,ch:[59,62,67]}, CH_Dm={bass:38,ch:[62,65,69]}, CH_Em={bass:40,ch:[59,64,67]},
+      CH_E ={bass:40,ch:[59,64,68]};
+const M_SONGS = {
+  a:{ tempo:116, barLen:8, waltz:false,      // rozšířená svatební: sloka · odpověď · most · finále
+    prog:[CH_C,CH_F,CH_Am,CH_G, CH_C,CH_F,CH_Am,CH_G, CH_Dm,CH_G,CH_Em,CH_Am, CH_F,CH_G,CH_C,CH_G],
+    lead:[72,0,71,72, 76,0,74,72, 77,0,76,74, 72,0,69,0,     // A — původní téma
+          72,0,76,79, 77,0,76,74, 74,0,72,71, 67,0,72,0,
+          76,0,74,76, 79,0,77,76, 81,0,79,77, 76,0,72,0,     // A' — odpověď výš
+          76,0,72,76, 81,0,79,77, 79,0,77,74, 71,0,74,0,
+          74,0,77,74, 69,0,74,77, 79,0,74,71, 74,0,67,0,     // B — most (d moll)
+          76,0,71,76, 79,0,76,71, 72,0,76,72, 69,0,64,0,
+          77,0,76,77, 81,0,79,77, 79,0,79,81, 83,0,81,79,    // finále — stoupavý běh
+          84,0,79,76, 72,0,76,79, 74,76,77,79, 83,0,84,0] },
+  b:{ tempo:104, barLen:8, waltz:false,      // kánon: půlové tóny → osminové figurace
+    prog:[CH_C,CH_G,CH_Am,CH_Em,CH_F,CH_C,CH_F,CH_G, CH_C,CH_G,CH_Am,CH_Em,CH_F,CH_C,CH_F,CH_G],
+    lead:[76,0,0,0, 72,0,0,0, 74,0,0,0, 71,0,0,0,
+          72,0,0,0, 69,0,0,0, 71,0,0,0, 67,0,0,0,
+          69,0,0,0, 65,0,0,0, 67,0,0,0, 72,0,0,0,
+          69,0,0,0, 72,0,0,0, 74,0,0,0, 71,0,0,0,
+          72,76,79,76, 84,79,76,72, 71,74,79,74, 83,79,74,71,
+          69,72,76,72, 81,76,72,69, 67,71,76,71, 79,76,71,67,
+          65,69,72,69, 77,72,69,65, 64,67,72,67, 76,72,67,64,
+          65,69,72,77, 81,77,72,69, 67,71,74,79, 83,0,79,0] },
+  c:{ tempo:150, barLen:6, waltz:true,       // valčík: um-pa-pa, durová sloka · mollový střed · návrat
+    prog:[CH_C,CH_G,CH_C,CH_G, CH_C,CH_F,CH_G,CH_C, CH_Am,CH_E,CH_Am,CH_G, CH_F,CH_C,CH_Dm,CH_G,
+          CH_F,CH_C,CH_G,CH_C, CH_F,CH_C,CH_G,CH_C],
+    lead:[67,0,72,0,76,0, 74,0,71,0,74,0, 76,0,72,0,67,0, 74,0,71,0,0,0,
+          67,0,72,0,76,0, 77,0,74,0,69,0, 74,0,71,0,74,0, 72,0,0,0,0,0,
+          69,0,72,0,76,0, 76,0,71,0,68,0, 69,0,72,0,76,0, 79,0,74,0,71,0,
+          77,0,81,0,77,0, 76,0,72,0,76,0, 74,0,77,0,74,0, 71,0,74,0,79,0,
+          81,0,77,0,72,0, 76,0,79,0,84,0, 83,0,79,0,74,0, 76,0,72,0,76,0,
+          77,0,76,0,74,0, 76,0,72,0,69,0, 74,0,71,0,74,0, 72,0,0,0,0,0] },
+};
+let musicSongKey = 'a';
+function musicSelect(k){ if(M_SONGS[k]) musicSongKey = k; }   // volá index.html při startu hry
 const music = { on:false, step:0, nextTime:0, timer:null };
 let musicShouldPlay = () => true;            // háček: kdy smí hudba hrát (index → jen ve hře, mimo pauzu)
 let musicRateFn = () => 1;                   // háček: násobič tempa (index → zrychluje s pádem kapslí)
@@ -169,21 +196,30 @@ function musicStop(){
   music.on=false;
   if(music.timer){ clearInterval(music.timer); music.timer=null; }
 }
-function musicStep(step, t){
-  const bar=(step>>3) % M_PROG.length, beat=step&7, chord=M_PROG[bar];
-  if(beat===0 || beat===4) toneAt(midiHz(chord.bass), t, 0.36, {type:'triangle', vol:0.15});   // basa
-  if((beat&1)===0){ const n=chord.ch[(beat>>1)%chord.ch.length]; toneAt(midiHz(n), t, 0.16, {type:'square', vol:0.045}); } // arpeggio
-  const lead=M_LEAD[step];
-  if(lead) toneAt(midiHz(lead), t, 0.20, {type:'square', vol:0.06});                            // melodie
+function musicStep(song, step, t){
+  const bar=(step/song.barLen|0)%song.prog.length, beat=step%song.barLen, chord=song.prog[bar];
+  if(song.waltz){                            // 3/4: basa + „um-pa-pa" stab na 2. a 3. dobu
+    if(beat===0) toneAt(midiHz(chord.bass), t, 0.34, {type:'triangle', vol:0.15});
+    if(beat===2||beat===4){
+      toneAt(midiHz(chord.ch[0]), t, 0.12, {type:'square', vol:0.03});
+      toneAt(midiHz(chord.ch[2]), t, 0.12, {type:'square', vol:0.03});
+    }
+  } else {                                   // 4/4: basa na těžké doby, arpeggio na sudé
+    if(beat===0 || beat===4) toneAt(midiHz(chord.bass), t, 0.36, {type:'triangle', vol:0.15});
+    if((beat&1)===0){ const n=chord.ch[(beat>>1)%chord.ch.length]; toneAt(midiHz(n), t, 0.16, {type:'square', vol:0.045}); }
+  }
+  const lead=song.lead[step];
+  if(lead) toneAt(midiHz(lead), t, song.waltz?0.24:0.20, {type:'square', vol:0.06});   // melodie
 }
 function musicScheduler(){
   if(!music.on) return;
   if(!actx || !musicShouldPlay()){ musicStop(); return; }   // pojistka: stav se změnil
-  const spStep = 60/M_TEMPO/2/musicRateFn();   // délka osminového kroku v sekundách (zrychluje s hrou)
+  const song = M_SONGS[musicSongKey];
+  const spStep = 60/song.tempo/2/musicRateFn();   // délka osminového kroku v sekundách (zrychluje s hrou)
   while(music.nextTime < actx.currentTime + 0.20){
-    musicStep(music.step, music.nextTime);
+    musicStep(song, music.step, music.nextTime);
     music.nextTime += spStep;
-    music.step = (music.step+1) % M_LEAD.length;
+    music.step = (music.step+1) % song.lead.length;
   }
 }
 

@@ -270,7 +270,7 @@
     <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>Esc / Start</b> zpět do hry</div>
   </div>
 
-<script src="audio.40979ad6.js"></script>
+<script src="audio.caef19bf.js"></script>
 <script src="statsview.5ee1c382.js"></script>
 <script>
 //================= SETUP =================
@@ -409,7 +409,7 @@ const OPP = {U:'D',D:'U',L:'R',R:'L'};
 const I = (r,c)=> r*COLS+c;
 
 //================= HUDBA: napojení na stav hry =================
-// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.40979ad6.js.
+// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.caef19bf.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
 musicShouldPlay = () => mode==='play' && !paused;
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
@@ -1198,6 +1198,8 @@ function startGame(ai){
   lastCdNum=0;
   audioInit();                             // start je gesto uživatele → rozběhni zvuk
   mode='play';
+  // hudba podle obtížnosti: 0–2 rozšířená svatební, 3–5 kánon, hardcore valčík
+  musicSelect(level<=2 ? 'a' : level<=5 ? 'b' : 'c');
   musicStop(); musicStart();               // hudba na pozadí (hraje i během odpočtu)
 }
 function dropIntervalNow(){
@@ -1981,7 +1983,7 @@ function pollGamepads(){
   const bothToast = muteHeld>=2, toastEdge = bothToast && !toastPrev;
   // toastPrev nastav DŘÍV, než se cokoli spustí: kdyby zvuk/animace vyhodily výjimku,
   // hrana by jinak platila každý krok znovu → smyčka by padala pořád dokola a hra
-  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.40979ad6.js bez Snd.toast).
+  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.caef19bf.js bez Snd.toast).
   toastPrev = bothToast;
   if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
   if(mode==='menu' && toastEdge){ toastTimer=TOAST_FRAMES; audioInit(); Snd.toast(); }
