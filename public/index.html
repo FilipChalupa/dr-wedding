@@ -190,8 +190,20 @@
   /* easter egg flip180 točí obraz stejným transformem → v ?tv režimu složit obojí */
   body.tvmode.flip180 .screen { transform:translate(var(--ov-x,0px), var(--ov-y,0px)) rotate(180deg); }
 
-  /* ---- režim kalibrace overscanu: zvýrazněný okraj plochy + nápověda ---- */
-  body.ovcal .screen { outline:3px solid #f8d77e; outline-offset:-3px; }
+  /* ---- režim kalibrace overscanu: nápověda + rámeček s úhlopříčným křížem
+     z rohu do rohu — i když rohy vyčuhují mimo televizi, směr čar prozradí,
+     kudy se za nimi vydat */
+  body.ovcal .screen::after {
+    content:''; position:absolute; inset:0; z-index:14; pointer-events:none;
+    border:3px solid rgba(248,215,126,.9);
+    background:
+      linear-gradient(to top right,
+        transparent calc(50% - 1.5px), rgba(248,215,126,.75) calc(50% - 1.5px),
+        rgba(248,215,126,.75) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+      linear-gradient(to bottom right,
+        transparent calc(50% - 1.5px), rgba(248,215,126,.75) calc(50% - 1.5px),
+        rgba(248,215,126,.75) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  }
   #ovHint {
     display:none; position:absolute; left:50%; bottom:7%; transform:translateX(-50%);
     z-index:15; white-space:nowrap;
@@ -255,7 +267,7 @@
       <div class="glow"></div>
       <div class="flicker"></div>
       <div class="crton"><div class="crton-beam"></div></div>
-      <div id="ovHint">myš = posun středu &nbsp;·&nbsp; ↑ ↓ / kolečko = velikost &nbsp;·&nbsp; Enter/O = uložit &nbsp;·&nbsp; Esc = zrušit</div>
+      <div id="ovHint">myš = posun středu &nbsp;·&nbsp; ↑ ↓ / kolečko = velikost &nbsp;·&nbsp; Enter/O = uložit &nbsp;·&nbsp; Esc = zrušit &nbsp;·&nbsp; R = reset</div>
     </div>
     <div class="controls">
       <button id="btnStart" title="Start / zpět do menu">▶</button>
@@ -317,6 +329,13 @@ function ovClose(save){
     try{ localStorage.setItem(OV_KEY, JSON.stringify(ov)); }
     catch(e){ console.warn('Kalibraci overscanu se nepodařilo uložit:', e); }
   } else Object.assign(ov, ovBackup);
+  ovBackup=null; ovCal=false; document.body.classList.remove('ovcal');
+  ovApply(); Snd.menu();
+}
+function ovReset(){                          // R: zahoď kalibraci úplně → výchozí hodnoty
+  try{ localStorage.removeItem(OV_KEY); }
+  catch(e){ console.warn('Kalibraci overscanu se nepodařilo smazat:', e); }
+  Object.assign(ov, {x:0, y:0, scale:0.92});
   ovBackup=null; ovCal=false; document.body.classList.remove('ovcal');
   ovApply(); Snd.menu();
 }
@@ -1769,6 +1788,7 @@ window.addEventListener('keydown', e=>{
     if(e.code==='ArrowUp'){ ov.scale+=0.005; ovApply(); }
     else if(e.code==='ArrowDown'){ ov.scale-=0.005; ovApply(); }
     else if(e.code==='Enter'||e.code==='NumpadEnter'||e.code==='KeyO'){ if(!e.repeat) ovClose(true); }
+    else if(e.code==='KeyR'){ if(!e.repeat) ovReset(); }
     else if(e.code==='Escape') ovClose(false);
     e.preventDefault(); return;
   }
