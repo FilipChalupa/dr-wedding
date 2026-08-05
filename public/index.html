@@ -1563,7 +1563,7 @@ function drawToast(){
   }
   ctx.globalAlpha=life;
   for(let i=0;i<3;i++){ const hp=(1-life)+i*0.18; if(hp>0&&hp<1) heart(cx+(i-1)*15, sy-6-hp*38, 3, i%2?'#ef5f93':'#ff8ab0'); }
-  T('NA ZDRAVÍ!', cx, baseY+16, 9, '#f8d77e', 'center', true);
+  T('NA ZDRAVÍ!', cx, baseY+16, 8, '#f8d77e', 'center', true);   // menší, ať nezasahuje do rukávu ženicha
   ctx.globalAlpha=1;
 }
 
