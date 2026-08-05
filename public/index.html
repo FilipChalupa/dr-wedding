@@ -270,7 +270,7 @@
     <div id="statsHint">◀ ▶ dny · ▲ ▼ posun · <b>Esc / Start</b> zpět do hry</div>
   </div>
 
-<script src="audio.ca465784.js"></script>
+<script src="audio.b7b9a04b.js"></script>
 <script src="statsview.5ee1c382.js"></script>
 <script>
 //================= SETUP =================
@@ -409,7 +409,7 @@ const OPP = {U:'D',D:'U',L:'R',R:'L'};
 const I = (r,c)=> r*COLS+c;
 
 //================= HUDBA: napojení na stav hry =================
-// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.ca465784.js.
+// Vlastní zvukový engine (Snd, toneAt, musicStart…) je ve sdíleném audio.b7b9a04b.js.
 // Tady jen řekneme, KDY smí hudba hrát a JAK zrychluje s pádem kapslí.
 musicShouldPlay = () => mode==='play' && !paused && performance.now()>=countdownEnd;   // až po odpočtu 3·2·1
 function gameSpeedProg(){   // 0 (start) … 1 (max rychlost) podle aktuální rychlosti pádu kapslí
@@ -2007,7 +2007,7 @@ function pollGamepads(){
   const bothToast = muteHeld>=2, toastEdge = bothToast && !toastPrev;
   // toastPrev nastav DŘÍV, než se cokoli spustí: kdyby zvuk/animace vyhodily výjimku,
   // hrana by jinak platila každý krok znovu → smyčka by padala pořád dokola a hra
-  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.ca465784.js bez Snd.toast).
+  // by „zamrzla", dokud oba drží (stalo se se zastaralou cache audio.b7b9a04b.js bez Snd.toast).
   toastPrev = bothToast;
   if(bothToast){ glassTimer[0]=0; glassTimer[1]=0; }   // cinkají oba → žádné jednotlivé skleničky
   if(mode==='menu' && toastEdge){ toastTimer=TOAST_FRAMES; audioInit(); Snd.toast(); }

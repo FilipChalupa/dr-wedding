@@ -110,36 +110,25 @@ const Snd = {
     toneAt(2093, t+0.004, 0.50, {type:'sine',     vol:0.06, attack:0.001});   // C7 — třpyt
     toneAt(3136, t,       0.22, {type:'sine',     vol:0.03, attack:0.001});   // vysoká jiskra
   },
-  win(){   // slavnostní svatební pochod (Mendelssohn – Svatební pochod, C dur)
+  win(){   // slavnostní svatební sbor (Wagner – „Zde přichází nevěsta", C dur)
     if(muted||!actx) return;
-    const t0=actx.currentTime+0.05, q=0.30;          // délka čtvrťky (slavnostní tempo)
-    const N={B4:494,C5:523,D5:587,E5:659,F5:698,G5:784,C6:1047};
-    const mel=[
-      // fanfára: opakované C, vzhůru na E
-      [N.C5,1.5],[N.C5,0.5],[N.C5,1],[N.E5,1],           // C. C  C E
-      [N.D5,1],[N.C5,1],[N.B4,1],[N.C5,1],               // D C B C  (obrat)
-      // fanfára o tercii výš
-      [N.E5,1.5],[N.E5,0.5],[N.E5,1],[N.G5,1],           // E. E  E G
-      [N.F5,1],[N.E5,1],[N.D5,1],[N.C5,1],               // F E D C
-      // slavnostní vzestupný rozklad C dur
-      [N.C5,1],[N.E5,1],[N.G5,1],[N.C6,1],               // C E G C
-      [N.G5,1],[N.E5,1],[N.C5,2],                        // G E C  (závěr)
+    const t0=actx.currentTime+0.05, q=0.32;          // délka čtvrťky (vznešené tempo)
+    const mel=[                                       // C F F F | C G E F | C F F A | G F E F
+      [523,1],[698,1.5],[698,0.5],[698,2],
+      [523,1],[784,1.5],[659,0.5],[698,2],
+      [523,1],[698,1.5],[698,0.5],[880,2],
+      [784,1.5],[698,0.5],[659,1],[698,2],
     ];
     let t=t0; const starts=[];
     for(const [f,d] of mel){
       starts.push(t);
-      toneAt(f,   t, d*q*0.9, {type:'square',   vol:0.15});   // melodie
-      toneAt(f/2, t, d*q*0.9, {type:'triangle', vol:0.09});   // oktáva níž pro plnost
+      toneAt(f,   t, d*q*0.92, {type:'square',   vol:0.14});   // melodie
+      toneAt(f/2, t, d*q*0.92, {type:'triangle', vol:0.09});   // oktáva níž pro plnost
       t += d*q;
     }
-    // slavnostní basový doprovod na těžkých dobách (C dur, V→I)
-    toneAt(131, starts[0],  q*2.2, {type:'triangle', vol:0.13});  // C
-    toneAt(98,  starts[4],  q*2.2, {type:'triangle', vol:0.13});  // G
-    toneAt(131, starts[8],  q*2.2, {type:'triangle', vol:0.13});  // C
-    toneAt(98,  starts[12], q*2.2, {type:'triangle', vol:0.13});  // G
-    toneAt(131, starts[16], q*2.2, {type:'triangle', vol:0.13});  // C
-    toneAt(98,  starts[20], q*1,   {type:'triangle', vol:0.13});  // G (dominanta)
-    toneAt(131, starts[22], q*2.5, {type:'triangle', vol:0.14});  // C (závěr)
+    // basy na začátcích frází (F → C → F → G) + závěrečné F
+    for(const [f,i] of [[87,0],[131,4],[87,8],[98,12]]) toneAt(f, starts[i], q*3.6, {type:'triangle', vol:0.13});
+    toneAt(175, t-q*2, q*2.2, {type:'triangle', vol:0.10});
   },
 };
 
