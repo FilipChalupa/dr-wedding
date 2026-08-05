@@ -1844,7 +1844,12 @@ function frame(now){
     else if(mode==='play') drawPlay();
     else if(mode==='over') drawOver();
     // mode==='stats' → statistiky kreslí HTML overlay, canvas nerušíme
-    if(toastTimer>0 && mode!=='stats') drawToast();   // přípitek přes aktuální obrazovku
+    if(toastTimer>0 && mode!=='stats'){               // přípitek přes aktuální obrazovku
+      // v menu je obsah posunutý o 12 px nahoru (vystředění) → posuň i přípitek,
+      // ať skleničky sedí na stejném místě jako ty od jednoho hráče (glassTimer)
+      if(mode==='menu'){ ctx.save(); ctx.translate(0,-12); drawToast(); ctx.restore(); }
+      else drawToast();
+    }
     if(TVMODE) renderTV(now);   // ?tv: překresli hotový snímek na celoobrazovkový #tvout
   }catch(err){
     if(now-lastFrameErr>2000){ lastFrameErr=now; console.error('Chyba ve smyčce hry (pokračuji dál):', err); }
