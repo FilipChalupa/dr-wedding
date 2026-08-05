@@ -54,7 +54,7 @@ ovladačů lišit — pokud by dvojice seděly opačně, dají se v `readPad` pr
 
 V menu: nahoru/dolů (`W`/`S`, šipky nebo ovladač) přepíná mezi *dva hráči* a *vs počítač*
 (na trénink sólo); doleva/doprava (`A`/`D`, šipky nebo ovladač) nastavuje **počet starostí**
-(5 úrovní obtížnosti) · `Enter` (nebo A/Start na ovladači) = start · `F` = fullscreen.
+(5 úrovní obtížnosti) · `Enter` (klávesnice) nebo **jen `Start`** (ovladač) = start · `F` = fullscreen.
 
 > Pozn.: hru nelze odstartovat ani ukončit kliknutím na obrazovku — slouží k tomu jen
 > klávesnice, ovladač, nebo tlačítko **START** pod televizí.

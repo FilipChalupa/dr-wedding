@@ -1714,6 +1714,10 @@ function drawMenu(){
   const yrs = anniversaryYears();
   if(yrs>0) drawFireworks();                          // 🎆 výroční ohňostroj na pozadí
 
+  // obsah menu je posunutý o 12 px nahoru, ať je na obrazovce vertikálně vystředěný
+  // (bez posunu: horní okraj ~28 px, dolní ~3 px); indikátor zvuku zůstává v rohu
+  ctx.save(); ctx.translate(0,-12);
+
   T('DR. WEDDING', W/2, 50, 24, '#f8d77e', 'center', true);
   heart(W/2-92, 40, 6, '#ef5f93'); heart(W/2+92, 40, 6, '#ef5f93');
   T('retro svatební duel', W/2, 68, 9, '#cba6ec', 'center');
@@ -1746,6 +1750,8 @@ function drawMenu(){
   if(yrs>0) T('— ŠŤASTNÉ '+yrs+'. VÝROČÍ! —', W/2, 84, 9, '#f8d77e', 'center', true);
 
   if(frameCount%50<32) T('— START —', W/2, 235, 9, '#ffffff', 'center', true);
+
+  ctx.restore();   // konec vertikálního vystředění
 
   // indikátor zvuku (přepíná se klávesou M). „M " je klávesová zkratka → skryj ji s ovladačem.
   // S připojeným ovladačem se „ZAP" vůbec neukazuje (ovladačem zvuk stejně nepřepneš) — jen „VYP" jako varování.
@@ -2050,7 +2056,7 @@ function pollGamepads(){
       }
       if(cur.right) menuPadRight = true;          // pro odemčení držením doprava > 5 s
       if(pendingAI!==prevAI || level!==prevLevel){ audioInit(); Snd.menu(); }   // změna nastavení = cvaknutí
-      if(hit('confirm')||hit('face')) menuStartPress(pIdx);   // Start i kterékoli ze 4 otáčecích tlačítek; oba naráz = „Ano" místo hry
+      if(hit('start')) menuStartPress(pIdx);   // hru startuje JEN Start (A/otáčecí tlačítka ne — ať nejde spustit omylem); oba naráz = „Ano" místo hry
     } else if(mode==='over'){
       // skryté kombo statistik (drž Select, 5× Start) funguje i na výherní obrazovce;
       // musí mít přednost, protože Start je zároveň 'confirm' (návrat do menu)

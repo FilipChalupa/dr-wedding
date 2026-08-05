@@ -33,7 +33,7 @@ const TEST = `
   expect(comboText(2,'L')==='Mám tě rád',  'combo 2 ženich = „Mám tě rád"');
   expect(comboText(2,'R')==='Mám tě ráda', 'combo 2 nevěsta = „Mám tě ráda"');
   expect(comboText(3,'L')==='Miluji tě',   'combo 3 = „Miluji tě"');
-  expect(comboText(4,'L')==='Hyjé koníčku.', 'combo 4 = „Hyjé koníčku."');
+  expect(comboText(4,'L')==='Hyjé koníčku', 'combo 4 = „Hyjé koníčku" (bez tečky, viz 2ce6225)');
   expect(comboText(5,'L')==='Kombo 5×',    'combo 5 = „Kombo 5×"');
 
   mode='menu'; tryF('drawMenu', drawMenu);
