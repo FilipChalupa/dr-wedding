@@ -1500,10 +1500,11 @@ function heart(x,y,sz,col){
 
 // Kombo (počet linií smazaných v tahu, >=2) ukazuje svatební hlášku místo suchého čísla.
 // 2 je podle toho, kdo ho udělal (nevěsta 'R' „ráda", ženich 'L' „rád"); 5 a víc už jen „Kombo N×".
-// Delší text se sám zmenší, ať se vejde do láhve.
+// Ve swap easter eggu letí smetí sám na sebe → vyznání se obrací taky („Mám se rád", „Miluji se").
+// Delší text se sám zmenší, ať se vejde.
 function comboText(n, side){
-  if(n===2) return side==='R' ? 'Mám tě ráda' : 'Mám tě rád';
-  if(n===3) return 'Miluji tě';
+  if(n===2) return (swapMode?'Mám se ':'Mám tě ') + (side==='R' ? 'ráda' : 'rád');
+  if(n===3) return swapMode ? 'Miluji se' : 'Miluji tě';
   if(n===4) return 'Hyjé koníčku';
   return 'Kombo '+n+'×';
 }

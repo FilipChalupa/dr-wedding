@@ -35,6 +35,12 @@ const TEST = `
   expect(comboText(3,'L')==='Miluji tě',   'combo 3 = „Miluji tě"');
   expect(comboText(4,'L')==='Hyjé koníčku', 'combo 4 = „Hyjé koníčku" (bez tečky, viz 2ce6225)');
   expect(comboText(5,'L')==='Kombo 5×',    'combo 5 = „Kombo 5×"');
+  swapMode = true;   // swap egg: smetí (i vyznání) míří sám na sebe
+  expect(comboText(2,'L')==='Mám se rád',  'combo 2 (swap) ženich = „Mám se rád"');
+  expect(comboText(2,'R')==='Mám se ráda', 'combo 2 (swap) nevěsta = „Mám se ráda"');
+  expect(comboText(3,'L')==='Miluji se',   'combo 3 (swap) = „Miluji se"');
+  expect(comboText(4,'L')==='Hyjé koníčku', 'combo 4 (swap) beze změny');
+  swapMode = false;
 
   mode='menu'; tryF('drawMenu', drawMenu);
   anoTimer=ANO_FRAMES; for(let i=0;i<4;i++){ frameCount+=14; tryF('drawMenu +Ano pokývnutí', drawMenu); } anoTimer=0;
